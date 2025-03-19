@@ -1,4 +1,4 @@
-# [Nome do Seu Jogo Aqui] - Desperte e Descubra
+# SoulRedemptionPygames - Desperte e Descubra
 
 [![Status do Projeto](https://img.shields.io/badge/Status-Em%20Desenvolvimento-yellow)](https://github.com/[seu-usuario]/[seu-repositorio]/projects/)
 [![Linguagem](https://img.shields.io/badge/Linguagem-Python-blue)](https://www.python.org/)
