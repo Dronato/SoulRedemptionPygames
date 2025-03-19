@@ -1,5 +1,6 @@
 import pygame
 import sys
+from player import Jogador
 
 # Inicializar Pygame
 pygame.init()
@@ -18,6 +19,7 @@ VERMELHO = (255, 0, 0)
 MARROM = (139, 69, 19)
 PRETO = (0, 0, 0)
 
+
 # Carregar imagens dos corações
 coracao_cheio = pygame.image.load("coracao_cheio.png")
 coracao_vazio = pygame.image.load("coracao_vazio.png")
@@ -31,130 +33,7 @@ pocao_cheia = pygame.transform.scale(pocao_cheia, (40, 40))
 pocao_vazia = pygame.transform.scale(pocao_vazia, (40, 40))
 
 # Classe do Jogador
-class Jogador(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
-        self.image = pygame.Surface((40, 60))
-        self.image.fill(AZUL)
-        self.rect = self.image.get_rect()
-        self.rect.center = (LARGURA // 2, ALTURA - 100)
 
-        self.vel_x = 0
-        self.vel_y = 0
-        self.velocidade = 5
-        self.velocidade_dash = 16
-        self.dash_ativo = False
-        self.dash_duracao = 16  # Reduz a duração do dash para ser mais instantâneo
-        self.dash_timer = 0
-        self.dash_cooldown_duration = 1500  # 1,5 segundos em milissegundos
-        self.ultimo_dash_time = 0
-        self.direcao_dash = 1
-        self.pode_dash = True
-
-        self.forca_pulo = -15
-        self.gravidade = 0.8
-        self.no_chao = False
-        self.pulos_restantes = 2
-        self.pulo_pressionado = False
-
-        # Sistema de vida
-        self.vida_maxima = 5
-        self.vida_atual = 5
-        self.invulneravel = False
-        self.ultimo_dano = 0
-        self.tempo_invulneravel = 1000
-
-        # Sistema de cura
-        self.curas_maximas = 3
-        self.curas_restantes = self.curas_maximas
-        self.pode_curar = True
-
-    def receber_dano(self, dano):
-        tempo_atual = pygame.time.get_ticks()
-        if not self.invulneravel or tempo_atual - self.ultimo_dano > self.tempo_invulneravel:
-            self.vida_atual -= dano
-            self.vida_atual = max(self.vida_atual, 0)
-            self.invulneravel = True
-            self.ultimo_dano = tempo_atual
-
-    def recuperar_vida(self):
-        if self.curas_restantes > 0 and self.vida_atual < self.vida_maxima:
-            cura = 2
-            self.vida_atual += cura
-            self.vida_atual = min(self.vida_atual, self.vida_maxima)
-            self.curas_restantes -= 1
-            return True
-        return False
-
-    def iniciar_dash(self):
-        tempo_atual = pygame.time.get_ticks()
-        if self.pode_dash and tempo_atual - self.ultimo_dash_time > self.dash_cooldown_duration:
-            self.dash_ativo = True
-            self.dash_timer = self.dash_duracao
-            self.ultimo_dash_time = tempo_atual
-            self.vel_x = self.direcao_dash * self.velocidade_dash
-            self.vel_y = 0
-            self.pode_dash = False # Impede dashes consecutivos muito rápidos
-
-    def atualizar(self, plataformas, inimigos):
-        teclas = pygame.key.get_pressed()
-
-        if not self.dash_ativo:
-            self.vel_x = 0
-            if teclas[pygame.K_LEFT] or teclas[pygame.K_a]:
-                self.vel_x = -self.velocidade
-                self.direcao_dash = -1
-            if teclas[pygame.K_RIGHT] or teclas[pygame.K_d]:
-                self.vel_x = self.velocidade
-                self.direcao_dash = 1
-
-            if teclas[pygame.K_SPACE] or teclas[pygame.K_w]:
-                if not self.pulo_pressionado and self.pulos_restantes > 0:
-                    self.vel_y = self.forca_pulo
-                    self.pulos_restantes -= 1
-                    self.pulo_pressionado = True
-            else:
-                self.pulo_pressionado = False
-
-            self.vel_y += self.gravidade
-
-        if self.dash_ativo:
-            self.dash_timer -= 1
-            if self.dash_timer <= 0:
-                self.dash_ativo = False
-                self.pode_dash = True # Permite dash novamente após o término
-
-        self.rect.x += self.vel_x
-        for plataforma in plataformas:
-            if self.rect.colliderect(plataforma.rect):
-                if self.vel_x > 0:
-                    self.rect.right = plataforma.rect.left
-                elif self.vel_x < 0:
-                    self.rect.left = plataforma.rect.right
-
-        self.rect.y += self.vel_y
-        self.no_chao = False
-        for plataforma in plataformas:
-            if self.rect.colliderect(plataforma.rect):
-                if self.vel_y > 0:
-                    self.rect.bottom = plataforma.rect.top
-                    self.vel_y = 0
-                    self.no_chao = True
-                    self.pulos_restantes = 2
-                elif self.vel_y < 0:
-                    self.rect.top = plataforma.rect.bottom
-                    self.vel_y = 0
-
-        if self.rect.bottom >= ALTURA - 50:
-            self.rect.bottom = ALTURA - 50
-            self.vel_y = 0
-            self.no_chao = True
-            self.pulos_restantes = 2
-
-        # Colisão com inimigos
-        inimigos_atingidos = pygame.sprite.spritecollide(self, inimigos, False)
-        for inimigo in inimigos_atingidos:
-            self.receber_dano(1)
 
 # Classe do Inimigo
 class Inimigo(pygame.sprite.Sprite):
@@ -211,7 +90,7 @@ def exibir_popup_cura(tela, mensagem):
     tela.blit(texto, texto_rect)
 
 # Criar jogador
-jogador = Jogador()
+jogador = Jogador(100, 214)
 todos_sprites = pygame.sprite.Group(jogador)
 
 # Criar plataformas
@@ -254,6 +133,7 @@ while executando:
                 jogador.iniciar_dash()
 
     jogador.atualizar(plataformas, inimigos)
+    jogador.update_animation()
     inimigos.update()
 
     if jogador.vida_atual <= 0:
@@ -279,5 +159,6 @@ while executando:
         exibir_popup_cura(tela, popup_mensagem)
 
     pygame.display.flip()
+
 
 pygame.quit()
