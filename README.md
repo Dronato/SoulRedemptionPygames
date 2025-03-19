@@ -18,6 +18,17 @@
 * **Visual Pixel Art:** Desfrute de um estilo visual nostálgico e charmoso, criado com Pixilart.
 * **Interface Intuitiva:** Desenvolvida com foco na experiência do jogador, utilizando princípios de design definidos no Figma.
 
+  ## 🛠️ Ferramentas e Bibliotecas Utilizadas
+
+* **Python:** Linguagem de programação principal.
+* **Pygame:** Biblioteca para criação de jogos 2D em Python.
+* **sys:** Biblioteca padrão do Python para funcionalidades do sistema.
+* **Pixilart:** Ferramenta online para criação de gráficos em pixel art.
+* **Figma:** Ferramenta de design de interface do usuário (UI) e prototipagem.
+* **Pinterest:** Plataforma para inspiração visual e coleta de referências.
+* **ImgTools:** Ferramenta para manipulação e conversão de imagens.
+* **Canva:** Ferramenta de design gráfico para criar materiais de divulgação e outros recursos visuais.
+
 ## 🚀 Começando
 
 ### Pré-requisitos
@@ -50,13 +61,4 @@ Para iniciar o jogo, execute o seguinte comando no seu terminal:
 ```bash
 python SoulRedemption.py
 
-## 🛠️ Ferramentas e Bibliotecas Utilizadas
 
-* **Python:** Linguagem de programação principal.
-* **Pygame:** Biblioteca para criação de jogos 2D em Python.
-* **sys:** Biblioteca padrão do Python para funcionalidades do sistema.
-* **Pixilart:** Ferramenta online para criação de gráficos em pixel art.
-* **Figma:** Ferramenta de design de interface do usuário (UI) e prototipagem.
-* **Pinterest:** Plataforma para inspiração visual e coleta de referências.
-* **ImgTools:** Ferramenta para manipulação e conversão de imagens.
-* **Canva:** Ferramenta de design gráfico para criar materiais de divulgação e outros recursos visuais.
