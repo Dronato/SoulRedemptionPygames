@@ -112,6 +112,7 @@ class Jogador(pygame.sprite.Sprite):
 
         if not self.dash_ativo:
             self.vel_x = 0
+            new_state = IDLE
             
             
             if teclas[pygame.K_LEFT] or teclas[pygame.K_a]:
@@ -124,6 +125,9 @@ class Jogador(pygame.sprite.Sprite):
                 self.direcao_dash = 1
                 self.facing_right = True
                 new_state = WALK
+
+            if teclas[pygame.K_z]:
+                new_state = ATTACK
 
             if teclas[pygame.K_SPACE] or teclas[pygame.K_w]:
                 if not self.pulo_pressionado and self.pulos_restantes > 0:
@@ -189,7 +193,7 @@ class Jogador(pygame.sprite.Sprite):
 
             self.image = self.frames[self.frame_index]
         if not self.facing_right:
-            self.image = pygame.transform.flip(self.image, True, False)
+            self.image = pygame.transform.flip(self.frames[self.frame_index], True, False) if not self.facing_right else self.frames[self.frame_index]
             
     def draw(self, surface, position):
         surface.blit(self.image, position)

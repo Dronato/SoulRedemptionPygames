@@ -1,6 +1,7 @@
 import pygame
 import sys
 from player import Jogador
+from inimigo import Inimigo
 
 # Inicializar Pygame
 pygame.init()
@@ -36,19 +37,7 @@ pocao_vazia = pygame.transform.scale(pocao_vazia, (40, 40))
 
 
 # Classe do Inimigo
-class Inimigo(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        super().__init__()
-        self.image = pygame.Surface((30, 30))
-        self.image.fill(VERMELHO)
-        self.rect = self.image.get_rect(topleft=(x, y))
-        self.velocidade_x = 3
-        self.velocidade_y = 0
 
-    def update(self):
-        self.rect.x += self.velocidade_x
-        if self.rect.left < 0 or self.rect.right > LARGURA:
-            self.velocidade_x *= -1
 
 # Função para desenhar os corações
 def desenhar_coracoes(tela, jogador):
