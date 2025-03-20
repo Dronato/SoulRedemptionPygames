@@ -179,7 +179,7 @@ class Jogador(pygame.sprite.Sprite):
             self.pulos_restantes = 2
 
         # Colisão com inimigos
-        inimigos_atingidos = pygame.sprite.spritecollide(self, inimigos, False)
+        inimigos_atingidos = pygame.sprite.spritecollide(self, inimigos, False,collided=pygame.sprite.collide_mask)
         for inimigo in inimigos_atingidos:
             self.receber_dano(1)
         
