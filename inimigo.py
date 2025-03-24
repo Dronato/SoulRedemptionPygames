@@ -20,7 +20,7 @@ SPRITES = {
     ATTACK: {"file": "img/prota/dano_spritesheet.png", "frames": 5, "width": 340, "height": 320},
 }
 
-class Inimigo(pygame.sprite.Sprite):
+class Inimigo1mp1(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.state = INIMIGOIDLE

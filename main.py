@@ -1,7 +1,7 @@
 import pygame
 import sys
 from player import Jogador
-from inimigo import Inimigo
+import inimigo
 
 # Inicializar Pygame
 pygame.init()
@@ -9,6 +9,7 @@ pygame.init()
 # Configurações básicas
 tela = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 LARGURA, ALTURA = tela.get_size()
+
 FPS = 60
 relogio = pygame.time.Clock()
 
@@ -19,6 +20,11 @@ AZUL = (0, 0, 255)
 VERMELHO = (255, 0, 0)
 MARROM = (139, 69, 19)
 PRETO = (0, 0, 0)
+
+
+mapas = {
+    "mapa1": {"inimigos": [inimigo.Inimigo1mp1(300, 500),inimigo.Inimigo1mp1(400, 500)], "cenario": "img/mapa1/cenario1.png"}
+}
 
 
 # Carregar imagens dos corações
@@ -97,8 +103,12 @@ for x, y, w, h in dados_plataformas:
 
 # Criar inimigos
 inimigos = pygame.sprite.Group()
-inimigos.add(Inimigo(600, 800))
-inimigos.add(Inimigo(800, 700))
+
+mapa_atual = "mapa1"
+inimigos.add(*mapas[mapa_atual]["inimigos"])
+cenario_atual = pygame.image.load(mapas[mapa_atual]["cenario"])
+cenario_atual = pygame.transform.scale(cenario_atual, (LARGURA, ALTURA))
+
 
 deslocamento_camera_x = 0
 deslocamento_camera_y = 0
@@ -109,6 +119,7 @@ popup_duracao = 1000 # 1 segundo
 executando = True
 while executando:
     relogio.tick(FPS)
+    tela.blit(cenario_atual,(0,0))
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             executando = False
@@ -131,7 +142,7 @@ while executando:
     deslocamento_camera_x = LARGURA // 2 - jogador.rect.centerx
     deslocamento_camera_y = ALTURA // 1.3 - jogador.rect.centery
 
-    tela.fill(BRANCO)
+    
 
     for plataforma in plataformas:
         tela.blit(plataforma.image, (plataforma.rect.x + deslocamento_camera_x, plataforma.rect.y + deslocamento_camera_y))
