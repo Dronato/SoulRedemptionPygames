@@ -9,15 +9,21 @@ relogio = pygame.time.Clock()
 IDLE = "idle"
 WALK = "walk"
 ATTACK = "attack"
-INIMIGOIDLE = "enemyidle"
+PULO = 'pulo'
+DASH = 'dash'
+ATTACK1 = 'attack1'
+ATTACK2 = 'attack2'
+ATTACK3 = 'attack3'
 
 SPRITES = {
-    INIMIGOIDLE:{"file": "img/mapa1/inimigo1/inimigo1_andando.png", "frames": 3, "width":445 , "height": 394},
-    IDLE: {"file": "img/prota/spritesheet.png", "frames": 6, "width": 320, "height": 320},
-    WALK: {"file": "img/prota/walk_sprite.png", "frames": 10, "width": 192, "height": 172},
-    ATTACK: {"file": "img/prota/dano_spritesheet.png", "frames": 5, "width": 340, "height": 320},
+    IDLE: {"file": "img/prota/parada.png", "frames": 6, "width": 176, "height": 148},
+    WALK: {"file": "img/prota/andando.png", "frames": 10, "width": 198, "height": 144},
+    PULO: {"file": "img/prota/pulo.png", "frames": 15, "width": 256, "height": 256},
+    DASH: {"file": "img/prota/dash.png", "frames": 5, "width": 214, "height": 144},
+    ATTACK1: {"file": "img/prota/attack1.png", "frames": 6, "width": 339, "height": 402},
+    ATTACK2: {"file": "img/prota/attack2.png", "frames": 7, "width": 339, "height": 402},
+    ATTACK3: {"file": "img/prota/attack3.png", "frames": 8, "width": 339, "height": 402},    
 }
-
 class Jogador(pygame.sprite.Sprite):
     def __init__(self, x, y, colisao_rects, tmx_data,largura_mapa, altura_mapa):
         super().__init__()
@@ -65,6 +71,11 @@ class Jogador(pygame.sprite.Sprite):
         # funções gui e pe
         self.facing_right = True
         self.animation_timer = 0
+        # attack
+        self.attack_sequence = []
+        self.last_attack_time = 0
+        self.MAX_ATTACK_INTERVAL = 700
+        self.ataque_pressionado = False
 
 
     # funções de animações
@@ -78,7 +89,7 @@ class Jogador(pygame.sprite.Sprite):
         for i in range(frame_count):
             x = i * width
             frame = self.sprite_sheet.subsurface(pygame.Rect(x, 0, width, height))
-            frame = pygame.transform.scale(frame, (160, 160))
+            frame = pygame.transform.scale(frame, (50, 50))
             frames.append(frame)
         return frames
 
@@ -101,6 +112,8 @@ class Jogador(pygame.sprite.Sprite):
 
     def iniciar_dash(self):
         tempo_atual = pygame.time.get_ticks()
+        self.state = DASH
+        self.load_sprites()
         if self.pode_dash and tempo_atual - self.ultimo_dash_time > self.dash_cooldown_duration:
             self.dash_ativo = True
             self.dash_timer = self.dash_duracao
@@ -108,6 +121,22 @@ class Jogador(pygame.sprite.Sprite):
             self.vel_x = self.direcao_dash * self.velocidade_dash
             self.vel_y = 0
             self.pode_dash = False # Impede dashes consecutivos muito rápidos
+
+    # FUNÇÃO DE ATACAR DO PEDRO E GUI
+    def atacar(self):
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_attack_time > self.MAX_ATTACK_INTERVAL:
+            self.attack_sequence.clear()
+        
+        if len(self.attack_sequence) < 3:
+            self.attack_sequence.append(f"attack{len(self.attack_sequence) + 1}")
+            self.last_attack_time = current_time
+            self.state = self.attack_sequence[-1]
+            
+            self.frame_index = 0
+        self.load_sprites()
+        print(self.state)
+    # FIM DEF ATACAR
 
     def atualizar(self, inimigos):
         teclas = pygame.key.get_pressed()
@@ -118,7 +147,31 @@ class Jogador(pygame.sprite.Sprite):
             self.vel_x = 0
             new_state = IDLE
             
-            
+            # ATTACK PEDRO E GUI
+
+            if self.state == ATTACK1:
+                    if self.frame_index < len(self.frames) - 1:
+                        return 
+                    else:
+                        new_state = IDLE
+            else: 
+                new_state = IDLE
+            if self.state == ATTACK2:
+                    if self.frame_index < len(self.frames) - 1:
+                        return 
+                    else:
+                        new_state = IDLE
+            else: 
+                new_state = IDLE
+            if self.state == ATTACK3:
+                    if self.frame_index < len(self.frames) - 1:
+                        return 
+                    else:
+                        new_state = IDLE
+            else: 
+                new_state = IDLE
+            # FIM DO ATTACK
+
             if teclas[pygame.K_LEFT] or teclas[pygame.K_a]:
                 self.vel_x = -self.velocidade
                 self.direcao_dash = -1

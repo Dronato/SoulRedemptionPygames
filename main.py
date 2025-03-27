@@ -124,6 +124,8 @@ while executando:
                     popup_timer = pygame.time.get_ticks() + popup_duracao
             if evento.key == pygame.K_LSHIFT or evento.key == pygame.K_RSHIFT:
                 jogador.iniciar_dash()
+            if evento.key == pygame.K_z:
+                jogador.atacar()
 
     jogador.atualizar( inimigos)
     jogador.update_animation()
