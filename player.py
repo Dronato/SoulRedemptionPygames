@@ -19,7 +19,7 @@ SPRITES = {
 }
 
 class Jogador(pygame.sprite.Sprite):
-    def __init__(self,x,y, colisao_rects, tmx_data):
+    def __init__(self, x, y, colisao_rects, tmx_data,largura_mapa, altura_mapa):
         super().__init__()
         self.state = IDLE
         self.load_sprites()
@@ -29,6 +29,8 @@ class Jogador(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.colisao_rects = colisao_rects
         self.tmx_data = tmx_data
+        self.largura_mapa = largura_mapa
+        self.altura_mapa = altura_mapa
 
         self.vel_x = 0
         self.vel_y = 0
@@ -172,7 +174,17 @@ class Jogador(pygame.sprite.Sprite):
                 self.rect.top = colidiu.bottom
             self.vel_y = 0
         
-        self.colisao_espinhos()
+        #self.colisao_espinhos() Retirei o método
+
+        # Colisão com as bordas do mapa
+        if self.rect.left < 0:
+            self.rect.left = 0
+        if self.rect.right > self.largura_mapa:
+            self.rect.right = self.largura_mapa
+        if self.rect.top < 0:
+            self.rect.top = 0
+        if self.rect.bottom > self.altura_mapa:
+            self.rect.bottom = self.altura_mapa
             
      
 
@@ -216,13 +228,12 @@ class Jogador(pygame.sprite.Sprite):
             if self.rect.colliderect(rect):
                 return rect
         return None
-        
-    def colisao_espinhos(self):
-        """Verifica colisão com os espinhos e aplica dano."""
     
-        layer = self.tmx_data.get_layer_by_name("Espinho")
-        if hasattr(layer, 'objects'):  # Verifica se a camada tem objetos
-            for obj in layer:
-                espinhos_rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
-                if self.rect.colliderect(espinhos_rect):
-                    self.receber_dano(1)  # Aplica dano
+    def colisao_espinhos(self):
+      """Verifica colisão com os espinhos e aplica dano."""
+      layer = self.tmx_data.get_layer_by_name("Espinho")
+      if hasattr(layer, 'objects'):  # Verifica se a camada tem objetos
+        for obj in layer:
+            espinhos_rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
+            if self.rect.colliderect(espinhos_rect):
+                self.receber_dano(1)  # Aplica dano

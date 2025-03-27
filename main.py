@@ -63,7 +63,7 @@ def desenhar_pocoes(tela, jogador):
 # Função para exibir mensagem de derrota
 def exibir_mensagem_derrota():
     fonte = pygame.font.Font(None, 74)
-    texto = fonte.render("Você Perdeu!", True, (255, 0, 0))
+    texto = fonte.render("Você Perdeu!", True, BRANCO)
     texto_rect = texto.get_rect(center=(LARGURA // 2, ALTURA // 2))
     tela.blit(texto, texto_rect)
     pygame.display.flip()
@@ -84,12 +84,16 @@ tmx_data = carregar_mapa("Mapa.tmx")
 if not tmx_data:
     sys.exit()
 
+# Calcular os limites do mapa
+largura_mapa = tmx_data.width * tmx_data.tilewidth
+altura_mapa = (tmx_data.height * tmx_data.tileheight)*1.5
+
 # Criar retângulos de colisão a partir da camada "Chão"
 colisao_rects = criar_mapa_rects(tmx_data, "Chão")
 
 
 # Criar jogador
-jogador = Jogador(100, 214, colisao_rects, tmx_data)
+jogador = Jogador(100, 214, colisao_rects, tmx_data,largura_mapa, altura_mapa)
 todos_sprites = pygame.sprite.Group(jogador)
 
 # Criar inimigos
@@ -127,7 +131,15 @@ while executando:
     tela.fill((0, 0, 0))  # Fundo preto
     if tmx_data:
         deslocamento_camera_x = LARGURA // 2 - jogador.rect.centerx
-        deslocamento_camera_y = ALTURA // 1.3 - jogador.rect.centery
+        deslocamento_camera_y = (ALTURA - altura_mapa) // 2 - (jogador.rect.centery - ALTURA // 2) * 0.7
+        
+
+        # Restringir a câmera aos limites do mapa
+        deslocamento_camera_x = min(deslocamento_camera_x, 0)
+        deslocamento_camera_x = max(deslocamento_camera_x, LARGURA - largura_mapa)
+        deslocamento_camera_y = min(deslocamento_camera_y, 0)
+        deslocamento_camera_y = max(deslocamento_camera_y, ALTURA - altura_mapa)
+
         desenhar_mapa(tela, tmx_data, deslocamento_camera_x, deslocamento_camera_y)
 
     if jogador.vida_atual <= 0:
