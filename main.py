@@ -2,6 +2,7 @@ import pygame
 import sys
 from player import Jogador
 import inimigo
+from map_loader import carregar_mapa, desenhar_mapa, criar_mapa_rects
 
 # Inicializar Pygame
 pygame.init()
@@ -23,7 +24,7 @@ PRETO = (0, 0, 0)
 
 
 mapas = {
-    "mapa1": {"inimigos": [inimigo.Inimigo1mp1(300, 500),inimigo.Inimigo1mp1(400, 500)], "cenario": "img/mapa1/cenario1.png"}
+    "mapa1": {"inimigos": [inimigo.Inimigo1mp1(300, 500),inimigo.Inimigo1mp1(400, 500)]}
 }
 
 
@@ -38,12 +39,6 @@ pocao_cheia = pygame.image.load("pocao_cheia.png")
 pocao_vazia = pygame.image.load("pocao_vazia.png")
 pocao_cheia = pygame.transform.scale(pocao_cheia, (40, 40))
 pocao_vazia = pygame.transform.scale(pocao_vazia, (40, 40))
-
-# Classe do Jogador
-
-
-# Classe do Inimigo
-
 
 # Função para desenhar os corações
 def desenhar_coracoes(tela, jogador):
@@ -84,31 +79,23 @@ def exibir_popup_cura(tela, mensagem):
     pygame.draw.rect(tela, PRETO, texto_rect.inflate(20, 10))
     tela.blit(texto, texto_rect)
 
+# Carregar o mapa
+tmx_data = carregar_mapa("Mapa.tmx")
+if not tmx_data:
+    sys.exit()
+
+# Criar retângulos de colisão a partir da camada "Chão"
+colisao_rects = criar_mapa_rects(tmx_data, "Chão")
+
+
 # Criar jogador
-jogador = Jogador(100, 214)
+jogador = Jogador(100, 214, colisao_rects, tmx_data)
 todos_sprites = pygame.sprite.Group(jogador)
-
-# Criar plataformas
-class Plataforma(pygame.sprite.Sprite):
-    def __init__(self, x, y, largura, altura):
-        super().__init__()
-        self.image = pygame.Surface((largura, altura))
-        self.image.fill(MARROM)
-        self.rect = self.image.get_rect(topleft=(x, y))
-
-plataformas = pygame.sprite.Group()
-dados_plataformas = [(200, 850, 150, 20), (400, 750, 200, 20)]
-for x, y, w, h in dados_plataformas:
-    plataformas.add(Plataforma(x, y, w, h))
 
 # Criar inimigos
 inimigos = pygame.sprite.Group()
-
 mapa_atual = "mapa1"
 inimigos.add(*mapas[mapa_atual]["inimigos"])
-cenario_atual = pygame.image.load(mapas[mapa_atual]["cenario"])
-cenario_atual = pygame.transform.scale(cenario_atual, (LARGURA, ALTURA))
-
 
 deslocamento_camera_x = 0
 deslocamento_camera_y = 0
@@ -116,10 +103,12 @@ mostrar_popup = False
 popup_mensagem = ""
 popup_timer = 0
 popup_duracao = 1000 # 1 segundo
+
 executando = True
 while executando:
     relogio.tick(FPS)
-    tela.blit(cenario_atual,(0,0))
+    
+    
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             executando = False
@@ -132,26 +121,24 @@ while executando:
             if evento.key == pygame.K_LSHIFT or evento.key == pygame.K_RSHIFT:
                 jogador.iniciar_dash()
 
-    jogador.atualizar(plataformas, inimigos)
+    jogador.atualizar( inimigos)
     jogador.update_animation()
     inimigos.update()
+    tela.fill((0, 0, 0))  # Fundo preto
+    if tmx_data:
+        deslocamento_camera_x = LARGURA // 2 - jogador.rect.centerx
+        deslocamento_camera_y = ALTURA // 1.3 - jogador.rect.centery
+        desenhar_mapa(tela, tmx_data, deslocamento_camera_x, deslocamento_camera_y)
 
     if jogador.vida_atual <= 0:
         exibir_mensagem_derrota()
 
-    deslocamento_camera_x = LARGURA // 2 - jogador.rect.centerx
-    deslocamento_camera_y = ALTURA // 1.3 - jogador.rect.centery
-
     
-
-    for plataforma in plataformas:
-        tela.blit(plataforma.image, (plataforma.rect.x + deslocamento_camera_x, plataforma.rect.y + deslocamento_camera_y))
-
     for inimigo in inimigos:
         tela.blit(inimigo.image, (inimigo.rect.x + deslocamento_camera_x, inimigo.rect.y + deslocamento_camera_y))
 
     tela.blit(jogador.image, (jogador.rect.x + deslocamento_camera_x, jogador.rect.y + deslocamento_camera_y))
-
+    
     desenhar_coracoes(tela, jogador)
     desenhar_pocoes(tela, jogador) # Chama a função para desenhar as poções
 

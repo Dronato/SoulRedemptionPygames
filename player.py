@@ -5,13 +5,12 @@ LARGURA, ALTURA = tela.get_size()
 FPS = 60
 relogio = pygame.time.Clock()
 
-
+# Configuração dos sprites e frames
 IDLE = "idle"
 WALK = "walk"
 ATTACK = "attack"
 INIMIGOIDLE = "enemyidle"
 
-# Configuração dos sprites e frames
 SPRITES = {
     INIMIGOIDLE:{"file": "img/mapa1/inimigo1/inimigo1_andando.png", "frames": 3, "width":445 , "height": 394},
     IDLE: {"file": "img/prota/spritesheet.png", "frames": 6, "width": 320, "height": 320},
@@ -20,13 +19,16 @@ SPRITES = {
 }
 
 class Jogador(pygame.sprite.Sprite):
-    def __init__(self,x,y):
+    def __init__(self,x,y, colisao_rects, tmx_data):
         super().__init__()
         self.state = IDLE
         self.load_sprites()
         self.frame_index = 0
         self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect(topleft=(x, y))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.colisao_rects = colisao_rects
+        self.tmx_data = tmx_data
 
         self.vel_x = 0
         self.vel_y = 0
@@ -105,7 +107,7 @@ class Jogador(pygame.sprite.Sprite):
             self.vel_y = 0
             self.pode_dash = False # Impede dashes consecutivos muito rápidos
 
-    def atualizar(self, plataformas, inimigos):
+    def atualizar(self, inimigos):
         teclas = pygame.key.get_pressed()
         new_state = self.state
         
@@ -151,26 +153,28 @@ class Jogador(pygame.sprite.Sprite):
                 self.dash_ativo = False
                 self.pode_dash = True # Permite dash novamente após o término
 
+        # Movimentação e Colisão Horizontal
         self.rect.x += self.vel_x
-        for plataforma in plataformas:
-            if self.rect.colliderect(plataforma.rect):
-                if self.vel_x > 0:
-                    self.rect.right = plataforma.rect.left
-                elif self.vel_x < 0:
-                    self.rect.left = plataforma.rect.right
+        colidiu = self.colisao_horizontal()
+        if colidiu:
+            self.vel_x = 0
 
+        # Movimentação e Colisão Vertical
         self.rect.y += self.vel_y
-        self.no_chao = False
-        for plataforma in plataformas:
-            if self.rect.colliderect(plataforma.rect):
-                if self.vel_y > 0:
-                    self.rect.bottom = plataforma.rect.top
-                    self.vel_y = 0
-                    self.no_chao = True
-                    self.pulos_restantes = 2
-                elif self.vel_y < 0:
-                    self.rect.top = plataforma.rect.bottom
-                    self.vel_y = 0
+        self.no_chao = False  # Reseta a flag
+        colidiu = self.colisao_vertical()
+        if colidiu:
+            if self.vel_y > 0:
+                self.rect.bottom = colidiu.top
+                self.no_chao = True
+                self.pulos_restantes = 2  # Resetar pulos ao tocar o chão
+            elif self.vel_y < 0:
+                self.rect.top = colidiu.bottom
+            self.vel_y = 0
+        
+        self.colisao_espinhos()
+            
+     
 
         if self.rect.bottom >= ALTURA - 50:
             self.rect.bottom = ALTURA - 50
@@ -194,10 +198,31 @@ class Jogador(pygame.sprite.Sprite):
             self.image = self.frames[self.frame_index]
         if not self.facing_right:
             self.image = pygame.transform.flip(self.frames[self.frame_index], True, False) if not self.facing_right else self.frames[self.frame_index]
+            self.mask = pygame.mask.from_surface(self.image)
             
     def draw(self, surface, position):
         surface.blit(self.image, position)
-    
 
-    
+    def colisao_horizontal(self):
+        """Verifica colisão horizontal com os retângulos do mapa."""
+        for rect in self.colisao_rects:
+            if self.rect.colliderect(rect):
+                return rect
+        return None
+
+    def colisao_vertical(self):
+        """Verifica colisão vertical com os retângulos do mapa."""
+        for rect in self.colisao_rects:
+            if self.rect.colliderect(rect):
+                return rect
+        return None
         
+    def colisao_espinhos(self):
+        """Verifica colisão com os espinhos e aplica dano."""
+    
+        layer = self.tmx_data.get_layer_by_name("Espinho")
+        if hasattr(layer, 'objects'):  # Verifica se a camada tem objetos
+            for obj in layer:
+                espinhos_rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
+                if self.rect.colliderect(espinhos_rect):
+                    self.receber_dano(1)  # Aplica dano
