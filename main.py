@@ -79,6 +79,7 @@ def exibir_popup_cura(tela, mensagem):
     pygame.draw.rect(tela, PRETO, texto_rect.inflate(20, 10))
     tela.blit(texto, texto_rect)
 
+
 # Carregar o mapa
 tmx_data = carregar_mapa("Mapa.tmx")
 if not tmx_data:
@@ -93,7 +94,7 @@ colisao_rects = criar_mapa_rects(tmx_data, "Chão")
 
 
 # Criar jogador
-jogador = Jogador(100, 214, colisao_rects, tmx_data,largura_mapa, altura_mapa)
+jogador = Jogador(100, 214, colisao_rects, tmx_data)
 todos_sprites = pygame.sprite.Group(jogador)
 
 # Criar inimigos
@@ -127,21 +128,16 @@ while executando:
             if evento.key == pygame.K_z:
                 jogador.atacar()
 
+    # Aplique os Espinhos
+    Jogador.handle_espinho_colisions(jogador,tmx_data)
+
     jogador.atualizar( inimigos)
     jogador.update_animation()
     inimigos.update()
     tela.fill((0, 0, 0))  # Fundo preto
     if tmx_data:
         deslocamento_camera_x = LARGURA // 2 - jogador.rect.centerx
-        deslocamento_camera_y = (ALTURA - altura_mapa) // 2 - (jogador.rect.centery - ALTURA // 2) * 0.7
-        
-
-        # Restringir a câmera aos limites do mapa
-        deslocamento_camera_x = min(deslocamento_camera_x, 0)
-        deslocamento_camera_x = max(deslocamento_camera_x, LARGURA - largura_mapa)
-        deslocamento_camera_y = min(deslocamento_camera_y, 0)
-        deslocamento_camera_y = max(deslocamento_camera_y, ALTURA - altura_mapa)
-
+        deslocamento_camera_y = ALTURA // 1.3 - jogador.rect.centery
         desenhar_mapa(tela, tmx_data, deslocamento_camera_x, deslocamento_camera_y)
 
     if jogador.vida_atual <= 0:
@@ -157,7 +153,7 @@ while executando:
     desenhar_pocoes(tela, jogador) # Chama a função para desenhar as poções
 
     if mostrar_popup and pygame.time.get_ticks() < popup_timer:
-        exibir_popup_cura(tela, popup_mensagem)
+        exibir_popup_cura(tela, mensagem)
 
     pygame.display.flip()
 

@@ -1,9 +1,6 @@
 import pygame
 from pytmx.util_pygame import load_pygame
 
-import pygame
-from pytmx.util_pygame import load_pygame
-
 def carregar_mapa(nome_arquivo):
     """Carrega os dados do mapa Tiled."""
     try:
@@ -21,7 +18,8 @@ def desenhar_mapa(tela, tmx_data, deslocamento_camera_x, deslocamento_camera_y):
         "Background",  # Primeiro: o fundo
         "Fundo",
         "Chão",       # Segundo: o chão
-        "Espinho"      # Terceiro: os espinhos
+        "Espinho_Maior",
+        "Espinho_Menor"
         # ... outras camadas em sua ordem desejada
     ]
     
@@ -45,16 +43,6 @@ def desenhar_mapa(tela, tmx_data, deslocamento_camera_x, deslocamento_camera_y):
             offset_x = getattr(layer, 'offsetx', 0)
             offset_y = getattr(layer, 'offsety', 0)
             tela.blit(layer.image, (offset_x + deslocamento_camera_x, offset_y + deslocamento_camera_y))
-        elif hasattr(layer, 'objects'):  # Camadas de objetos
-            for obj in layer:
-                if hasattr(obj, 'image'):  # Se o objeto tem uma imagem associada
-                    pos_x = obj.x + deslocamento_camera_x
-                    pos_y = obj.y + deslocamento_camera_y
-                    tela.blit(obj.image, (pos_x, pos_y))
-                else:
-                    # Desenha um retângulo para depuração
-                    rect = pygame.Rect(obj.x + deslocamento_camera_x, obj.y + deslocamento_camera_y, obj.width, obj.height)
-                    pygame.draw.rect(tela, (255, 0, 0), rect)  # Vermelho para espinhos
 def criar_mapa_rects(tmx_data, layer_name):
     """Cria retângulos de colisão a partir de uma camada específica do mapa."""
     rects = []

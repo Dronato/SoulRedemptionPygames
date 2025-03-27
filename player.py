@@ -1,3 +1,4 @@
+
 import pygame
 
 tela = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -14,8 +15,9 @@ DASH = 'dash'
 ATTACK1 = 'attack1'
 ATTACK2 = 'attack2'
 ATTACK3 = 'attack3'
-
+INIMIGOIDLE = "enemyidle"
 SPRITES = {
+    INIMIGOIDLE:{"file": "img/mapa1/inimigo1/inimigo1_andando.png", "frames": 3, "width":445 , "height": 394},
     IDLE: {"file": "img/prota/parada.png", "frames": 6, "width": 176, "height": 148},
     WALK: {"file": "img/prota/andando.png", "frames": 10, "width": 198, "height": 144},
     PULO: {"file": "img/prota/pulo.png", "frames": 15, "width": 256, "height": 256},
@@ -24,8 +26,9 @@ SPRITES = {
     ATTACK2: {"file": "img/prota/attack2.png", "frames": 7, "width": 339, "height": 402},
     ATTACK3: {"file": "img/prota/attack3.png", "frames": 8, "width": 339, "height": 402},    
 }
+
 class Jogador(pygame.sprite.Sprite):
-    def __init__(self, x, y, colisao_rects, tmx_data,largura_mapa, altura_mapa):
+    def __init__(self, x, y, colisao_rects, tmx_data):
         super().__init__()
         self.state = IDLE
         self.load_sprites()
@@ -35,8 +38,10 @@ class Jogador(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.colisao_rects = colisao_rects
         self.tmx_data = tmx_data
-        self.largura_mapa = largura_mapa
-        self.altura_mapa = altura_mapa
+        # Timer para dano dos espinhos
+        self.ultimo_dano_espinhos = 0
+        self.intervalo_dano_espinhos = 1000  # 1 segundo em milissegundos
+        
 
         self.vel_x = 0
         self.vel_y = 0
@@ -227,18 +232,6 @@ class Jogador(pygame.sprite.Sprite):
                 self.rect.top = colidiu.bottom
             self.vel_y = 0
         
-        #self.colisao_espinhos() Retirei o método
-
-        # Colisão com as bordas do mapa
-        if self.rect.left < 0:
-            self.rect.left = 0
-        if self.rect.right > self.largura_mapa:
-            self.rect.right = self.largura_mapa
-        if self.rect.top < 0:
-            self.rect.top = 0
-        if self.rect.bottom > self.altura_mapa:
-            self.rect.bottom = self.altura_mapa
-            
      
 
         if self.rect.bottom >= ALTURA - 50:
@@ -281,12 +274,22 @@ class Jogador(pygame.sprite.Sprite):
             if self.rect.colliderect(rect):
                 return rect
         return None
-    
-    def colisao_espinhos(self):
-      """Verifica colisão com os espinhos e aplica dano."""
-      layer = self.tmx_data.get_layer_by_name("Espinho")
-      if hasattr(layer, 'objects'):  # Verifica se a camada tem objetos
-        for obj in layer:
-            espinhos_rect = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
-            if self.rect.colliderect(espinhos_rect):
-                self.receber_dano(1)  # Aplica dano
+
+    def handle_espinho_colisions(self, tmx_data):
+        """Verifica a colisão com os espinhos e aplica dano."""
+        
+        layer = self.tmx_data.get_layer_by_name("Espinho_Maior")
+        layer2 = self.tmx_data.get_layer_by_name("Espinho_Menor")
+        tempo_atual = pygame.time.get_ticks()
+        # Verifique se o jogador colide com as propriedades dos espinhos grandes e pequenos
+        if layer is not None and hasattr(layer, 'image') and self.rect.colliderect(layer.image.get_rect(topleft=(layer.offsetx,layer.offsety))):
+            if tempo_atual - self.ultimo_dano_espinhos > self.intervalo_dano_espinhos:
+                self.receber_dano(1)
+                self.ultimo_dano_espinhos = tempo_atual
+                print('danoMaior')
+        # Verifica a colisão com os espinhos menores
+        if layer2 is not None and hasattr(layer2, 'image') and self.rect.colliderect(layer2.image.get_rect(topleft=(layer2.offsetx,layer2.offsety))):
+            if tempo_atual - self.ultimo_dano_espinhos > self.intervalo_dano_espinhos:
+                self.receber_dano(1)
+                self.ultimo_dano_espinhos = tempo_atual
+                print('danoMenor')
