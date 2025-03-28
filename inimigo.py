@@ -21,22 +21,32 @@ SPRITES = {
 }
 
 class Inimigo1mp1(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, colisao_rects, tmx_data,largura_mapa, altura_mapa):
         super().__init__()
         self.state = INIMIGOIDLE
         self.frame_index = 0
         self.animation_timer = 0
         self.facing_right = True
-        self.velocidade_x = 3
+        self.velocidade_x = 2
         self.velocidade_y = 0
         self.gravity = 0.5
         self.jump_strength = -10
         self.is_jumping = False
         self.moving = False
 
+        self.colisao_rects = colisao_rects
+        self.tmx_data = tmx_data
+        self.largura_mapa = largura_mapa
+        self.altura_mapa = altura_mapa
+
         # Carregar sprites
         self.frames = []
         self.load_sprites()
+
+        # Definir limites da patrulha (sentinela)
+        self.x_inicial = x  # Ponto de partida do inimigo
+        self.x_final = x + 300  # Distância máxima para a direita
+        self.patrulhando = True  # Estado de patrulha
 
         # Garantir que há pelo menos um frame válido
         if not self.frames:
@@ -65,9 +75,23 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         for i in range(frame_count):
             x = i * width
             frame = self.sprite_sheet.subsurface(pygame.Rect(x, 0, width, height))
-            frame = pygame.transform.scale(frame, (150, 150))
+            frame = pygame.transform.scale(frame, (80, 80))
             frames.append(frame)
         return frames
+    
+    def colisao_horizontal(self):
+        """Verifica colisão horizontal com os retângulos do mapa."""
+        for rect in self.colisao_rects:
+            if self.rect.colliderect(rect):
+                return rect
+        return None
+
+    def colisao_vertical(self):
+        """Verifica colisão vertical com os retângulos do mapa."""
+        for rect in self.colisao_rects:
+            if self.rect.colliderect(rect):
+                return rect
+        return None
 
     def update_animation(self):
         """Atualiza a animação do inimigo."""
@@ -87,10 +111,43 @@ class Inimigo1mp1(pygame.sprite.Sprite):
 
     def update(self):
         """Atualiza a posição e a animação do inimigo."""
-        self.rect.x += self.velocidade_x
-        if self.rect.left < 0 or self.rect.right > LARGURA:
-            self.velocidade_x *= -1
-            self.facing_right = not self.facing_right  # Faz o inimigo virar corretamente
+        if self.patrulhando:
+        # Movimento de patrulha entre os pontos x_inicial e x_final
+            if self.facing_right:
+                self.rect.x += self.velocidade_x
+                if self.rect.right >= self.x_final:  # Se chegar ao limite direito
+                    self.rect.right = self.x_final  # Garantir que ele não ultrapasse o limite
+                    self.facing_right = False  # Mudar a direção para a esquerda
+            else:
+                self.rect.x -= self.velocidade_x
+                if self.rect.left <= self.x_inicial:  # Se chegar ao limite esquerdo
+                    self.rect.left = self.x_inicial  # Garantir que ele não ultrapasse o limite
+                    self.facing_right = True  # Mudar a direção para a direita
+        else:
+        # Caso não esteja patrulhando, ele apenas se move com a velocidade definida
+           self.rect.x += self.velocidade_x
+
+    # Aplicar gravidade
+        self.velocidade_y += self.gravity
+        self.rect.y += self.velocidade_y
+
+    # Verificar colisões horizontais
+        colidiu = self.colisao_horizontal()
+        if colidiu:
+            self.velocidade_x = self.velocidade_x
+
+    # Movimentação e Colisão Vertical
+        self.rect.y += self.velocidade_y
+        self.no_chao = False  # Reseta a flag
+        colidiu = self.colisao_vertical()
+        if colidiu:
+            if self.velocidade_y > 0:
+                self.rect.bottom = colidiu.top
+                self.no_chao = True
+                self.pulos_restantes = 2  # Resetar pulos ao tocar o chão
+            elif self.velocidade_y < 0:
+                self.rect.top = colidiu.bottom
+            self.velocidade_y = self.velocidade_x
 
         # Aplicar gravidade
         self.velocidade_y += self.gravity

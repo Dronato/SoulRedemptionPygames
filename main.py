@@ -22,9 +22,7 @@ VERMELHO = (255, 0, 0)
 MARROM = (139, 69, 19)
 PRETO = (0, 0, 0)
 
-mapas = {
-    "mapa1": {"inimigos": [inimigo.Inimigo1mp1(300, 500), inimigo.Inimigo1mp1(400, 500)]}
-}
+
 
 # Carregar imagens dos corações
 coracao_cheio = pygame.image.load("coracao_cheio.png").convert_alpha()
@@ -114,6 +112,9 @@ colisao_rects.extend(paredes_colisao)
 jogador = Jogador(100, 214, colisao_rects, tmx_data, zoom_level)
 todos_sprites = pygame.sprite.Group(jogador)
 
+mapas = {
+    "mapa1": {"inimigos": [inimigo.Inimigo1mp1(x=2950, y=0, colisao_rects= colisao_rects, tmx_data=tmx_data,largura_mapa = largura_mapa, altura_mapa= altura_mapa), inimigo.Inimigo1mp1(x=4150, y=214, colisao_rects= colisao_rects, tmx_data=None,largura_mapa = largura_mapa, altura_mapa= altura_mapa)]}
+}
 # Criar inimigos
 inimigos = pygame.sprite.Group()
 mapa_atual = "mapa1"
