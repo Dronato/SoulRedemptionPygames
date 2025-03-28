@@ -1,4 +1,3 @@
-
 import pygame
 
 tela = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -20,6 +19,7 @@ SPRITES = {
     INIMIGOIDLE:{"file": "img/mapa1/inimigo1/inimigo1_andando.png", "frames": 3, "width":445 , "height": 394},
     IDLE: {"file": "img/prota/parada.png", "frames": 6, "width": 176, "height": 148},
     WALK: {"file": "img/prota/andando.png", "frames": 10, "width": 198, "height": 144},
+    ATTACK: {"file": "img/prota/dano_spritesheet.png", "frames": 5, "width": 340, "height": 320},
     PULO: {"file": "img/prota/pulo.png", "frames": 15, "width": 256, "height": 256},
     DASH: {"file": "img/prota/dash.png", "frames": 5, "width": 214, "height": 144},
     ATTACK1: {"file": "img/prota/attack1.png", "frames": 6, "width": 339, "height": 402},
@@ -28,7 +28,7 @@ SPRITES = {
 }
 
 class Jogador(pygame.sprite.Sprite):
-    def __init__(self, x, y, colisao_rects, tmx_data):
+    def __init__(self, x, y, colisao_rects, tmx_data,zoom_level = 2.0):
         super().__init__()
         self.state = IDLE
         self.load_sprites()
@@ -38,10 +38,10 @@ class Jogador(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.colisao_rects = colisao_rects
         self.tmx_data = tmx_data
+        self.zoom_level = zoom_level
         # Timer para dano dos espinhos
         self.ultimo_dano_espinhos = 0
         self.intervalo_dano_espinhos = 1000  # 1 segundo em milissegundos
-        
 
         self.vel_x = 0
         self.vel_y = 0
@@ -215,10 +215,13 @@ class Jogador(pygame.sprite.Sprite):
 
         # Movimentação e Colisão Horizontal
         self.rect.x += self.vel_x
-        colidiu = self.colisao_horizontal()
-        if colidiu:
+        colidiu_horizontal = self.colisao_horizontal()
+        if colidiu_horizontal:
+            if self.vel_x > 0:  # Movendo para a direita
+                self.rect.right = colidiu_horizontal.left
+            elif self.vel_x < 0:  # Movendo para a esquerda
+                self.rect.left = colidiu_horizontal.right
             self.vel_x = 0
-
         # Movimentação e Colisão Vertical
         self.rect.y += self.vel_y
         self.no_chao = False  # Reseta a flag
@@ -264,32 +267,59 @@ class Jogador(pygame.sprite.Sprite):
     def colisao_horizontal(self):
         """Verifica colisão horizontal com os retângulos do mapa."""
         for rect in self.colisao_rects:
-            if self.rect.colliderect(rect):
+            # Cria um novo retângulo com as dimensões escaladas
+            rect_escalado = pygame.Rect(rect.x * self.zoom_level, rect.y * self.zoom_level,
+                                        rect.width * self.zoom_level, rect.height * self.zoom_level)
+            
+            # Cria um novo retângulo para o jogador com as dimensões escaladas
+            jogador_rect_escalado = pygame.Rect(self.rect.x * self.zoom_level, self.rect.y * self.zoom_level,
+                                                self.rect.width * self.zoom_level, self.rect.height * self.zoom_level)
+            
+            if jogador_rect_escalado.colliderect(rect_escalado):
                 return rect
         return None
 
     def colisao_vertical(self):
         """Verifica colisão vertical com os retângulos do mapa."""
         for rect in self.colisao_rects:
-            if self.rect.colliderect(rect):
+            # Cria um novo retângulo com as dimensões escaladas
+            rect_escalado = pygame.Rect(rect.x * self.zoom_level, rect.y * self.zoom_level,
+                                        rect.width * self.zoom_level, rect.height * self.zoom_level)
+            
+            # Cria um novo retângulo para o jogador com as dimensões escaladas
+            jogador_rect_escalado = pygame.Rect(self.rect.x * self.zoom_level, self.rect.y * self.zoom_level,
+                                                self.rect.width * self.zoom_level, self.rect.height * self.zoom_level)
+            
+            if jogador_rect_escalado.colliderect(rect_escalado):
                 return rect
         return None
-
-    def handle_espinho_colisions(self, tmx_data):
-        """Verifica a colisão com os espinhos e aplica dano."""
-        
-        layer = self.tmx_data.get_layer_by_name("Espinho_Maior")
-        layer2 = self.tmx_data.get_layer_by_name("Espinho_Menor")
+    def handle_espinho_colisions(self, espinho_maior_layer, espinho_menor_layer):
         tempo_atual = pygame.time.get_ticks()
-        # Verifique se o jogador colide com as propriedades dos espinhos grandes e pequenos
-        if layer is not None and hasattr(layer, 'image') and self.rect.colliderect(layer.image.get_rect(topleft=(layer.offsetx,layer.offsety))):
-            if tempo_atual - self.ultimo_dano_espinhos > self.intervalo_dano_espinhos:
-                self.receber_dano(1)
-                self.ultimo_dano_espinhos = tempo_atual
-                print('danoMaior')
-        # Verifica a colisão com os espinhos menores
-        if layer2 is not None and hasattr(layer2, 'image') and self.rect.colliderect(layer2.image.get_rect(topleft=(layer2.offsetx,layer2.offsety))):
-            if tempo_atual - self.ultimo_dano_espinhos > self.intervalo_dano_espinhos:
-                self.receber_dano(1)
-                self.ultimo_dano_espinhos = tempo_atual
-                print('danoMenor')
+
+        # Crie um retângulo escalado para o jogador
+        jogador_rect_escalado = pygame.Rect(self.rect.x * self.zoom_level, self.rect.y * self.zoom_level,
+                                            self.rect.width * self.zoom_level, self.rect.height * self.zoom_level)
+
+        # Colisão com Espinho_Maior
+        if espinho_maior_layer is not None and hasattr(espinho_maior_layer, 'tiles'):
+            for x, y, gid in espinho_maior_layer:
+                if gid != 0:  # Assume que gid 0 é espaço vazio
+                    tile_rect = pygame.Rect(x * self.tmx_data.tilewidth * self.zoom_level, y * self.tmx_data.tileheight * self.zoom_level,
+                                            self.tmx_data.tilewidth * self.zoom_level, self.tmx_data.tileheight * self.zoom_level)
+                    if jogador_rect_escalado.colliderect(tile_rect):
+                        if tempo_atual - self.ultimo_dano_espinhos > self.intervalo_dano_espinhos:
+                            self.receber_dano(1)
+                            self.ultimo_dano_espinhos = tempo_atual
+                            print('danoMaior')
+
+        # Colisão com Espinho_Menor
+        if espinho_menor_layer is not None and hasattr(espinho_menor_layer, 'tiles'):
+            for x, y, gid in espinho_menor_layer:
+                if gid != 0:  # Assume que gid 0 é espaço vazio
+                    tile_rect = pygame.Rect(x * self.tmx_data.tilewidth * self.zoom_level, y * self.tmx_data.tileheight * self.zoom_level,
+                                            self.tmx_data.tilewidth * self.zoom_level, self.tmx_data.tileheight * self.zoom_level)
+                    if jogador_rect_escalado.colliderect(tile_rect):
+                        if tempo_atual - self.ultimo_dano_espinhos > self.intervalo_dano_espinhos:
+                            self.receber_dano(1)
+                            self.ultimo_dano_espinhos = tempo_atual
+                            print('danoMenor')
