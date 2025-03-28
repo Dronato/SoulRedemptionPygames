@@ -45,10 +45,10 @@ class Jogador(pygame.sprite.Sprite):
 
         self.vel_x = 0
         self.vel_y = 0
-        self.velocidade = 5
-        self.velocidade_dash = 16
+        self.velocidade = 3
+        self.velocidade_dash = 7
         self.dash_ativo = False
-        self.dash_duracao = 16  # Reduz a duração do dash para ser mais instantâneo
+        self.dash_duracao = 12  # Reduz a duração do dash para ser mais instantâneo
         self.dash_timer = 0
         self.dash_cooldown_duration = 1500  # 1,5 segundos em milissegundos
         self.ultimo_dash_time = 0
