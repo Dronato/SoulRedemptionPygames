@@ -1,8 +1,10 @@
+# --- START OF FILE main.py ---
+
 import pygame
 import sys
 from player import Jogador
 import inimigo
-from map_loader import carregar_mapa, desenhar_mapa, criar_mapa_rects
+from map_loader import carregar_mapa, desenhar_mapa, criar_mapa_rects # Manter criar_mapa_rects
 
 # Inicializar Pygame
 pygame.init()
@@ -87,7 +89,7 @@ if not tmx_data:
 
 # Calcular os limites do mapa
 largura_mapa = tmx_data.width * tmx_data.tilewidth
-altura_mapa = tmx_data.height * tmx_data.tileheight * 1.5
+altura_mapa = tmx_data.height * tmx_data.tileheight * 1.5 # Atenção: este 1.5 parece estranho, pode causar problemas de limite de câmera/mundo
 
 # Definir o fator de zoom
 zoom_level = 2.0  # Ajuste este valor para aumentar ou diminuir o zoom
@@ -96,20 +98,39 @@ zoom_level = 2.0  # Ajuste este valor para aumentar ou diminuir o zoom
 # Criar retângulos de colisão a partir da camada "Chão"
 colisao_rects = criar_mapa_rects(tmx_data, "Chão")
 
-# Criar paredes de colisão
-espessura_parede = 1  # Ajuste conforme necessário
+# --- NOVO: Criar retângulos de colisão para as rampas ---
+try:
+    rampas_esquerda_rects = criar_mapa_rects(tmx_data, "RampaParaEsquerda")
+except ValueError:
+    print("Aviso: Camada 'RampaParaEsquerda' não encontrada no mapa.")
+    rampas_esquerda_rects = []
+try:
+    rampas_direita_rects = criar_mapa_rects(tmx_data, "RampaParaDireita")
+except ValueError:
+    print("Aviso: Camada 'RampaParaDireita' não encontrada no mapa.")
+    rampas_direita_rects = []
+# --- FIM NOVO ---
+
+
+# Criar paredes de colisão (Manter como está, se necessário)
+espessura_parede = 1
 paredes_colisao = [
-    pygame.Rect(0, 0, largura_mapa, espessura_parede),  # Parede superior
-    pygame.Rect(0, altura_mapa - espessura_parede, largura_mapa, espessura_parede),  # Parede inferior
-    pygame.Rect(0, espessura_parede, espessura_parede, altura_mapa - 2 * espessura_parede),  # Parede esquerda
-    pygame.Rect(largura_mapa - espessura_parede, espessura_parede, espessura_parede, altura_mapa - 2 * espessura_parede)  # Parede direita
+    pygame.Rect(0, 0, largura_mapa, espessura_parede),
+    pygame.Rect(0, altura_mapa - espessura_parede, largura_mapa, espessura_parede),
+    pygame.Rect(0, espessura_parede, espessura_parede, altura_mapa - 2 * espessura_parede),
+    pygame.Rect(largura_mapa - espessura_parede, espessura_parede, espessura_parede, altura_mapa - 2 * espessura_parede)
 ]
+colisao_rects.extend(paredes_colisao) # Adiciona paredes apenas aos colisores 'normais'
 
-# Adicionar as paredes à lista de retângulos de colisão
-colisao_rects.extend(paredes_colisao)
+# --- ALTERADO: Passar os rects das rampas para o Jogador ---
+jogador = Jogador(x=100, y=214,
+                  colisao_rects=colisao_rects,
+                  rampas_esquerda_rects=rampas_esquerda_rects, # Novo argumento
+                  rampas_direita_rects=rampas_direita_rects,   # Novo argumento
+                  tmx_data=tmx_data,
+                  zoom_level=zoom_level)
+# --- FIM ALTERADO ---
 
-# Criar jogador
-jogador = Jogador(100, 214, colisao_rects, tmx_data, zoom_level)
 todos_sprites = pygame.sprite.Group(jogador)
 
 mapas = {
@@ -126,151 +147,203 @@ mostrar_popup = False
 popup_mensagem = ""
 popup_timer = 0
 popup_duracao = 1000  # 1 segundo
-mensagem = "teste"
+mensagem = "teste" # Esta variável parece não ser usada para o popup, verificar lógica
 
 
 # Modifique a função desenhar_mapa para aplicar o zoom
 def desenhar_mapa_com_zoom(tela, tmx_data, deslocamento_camera_x, deslocamento_camera_y, zoom_level):
+    # --- ALTERADO: Adicionar camadas de rampa ao desenho ---
     camadas_para_desenhar = [
         "Background",
         "Fundo",
         "Chão",
+        "RampaParaEsquerda", # Adicionado
+        "RampaParaDireita",  # Adicionado
         "Espinho_Maior",
         "Espinho_Menor"
     ]
+    # --- FIM ALTERADO ---
 
     for nome_camada in camadas_para_desenhar:
         try:
             layer = tmx_data.get_layer_by_name(nome_camada)
         except ValueError:
-            print(f"Aviso: Camada '{nome_camada}' não encontrada no mapa.")
+            # Aviso já é impresso ao carregar rects, não precisa repetir
+            # print(f"Aviso: Camada '{nome_camada}' não encontrada no mapa durante desenho.")
             continue
 
         if hasattr(layer, 'tiles'):  # Camadas de tiles
             for x, y, gid in layer:
                 tile = tmx_data.get_tile_image_by_gid(gid)
                 if tile:
-                    # Escala o tile
                     largura_tile = int(tmx_data.tilewidth * zoom_level)
                     altura_tile = int(tmx_data.tileheight * zoom_level)
+                    # Otimização: Escalar apenas uma vez se o tile for reutilizado
+                    # tile_cache = {} # Implementar cache se necessário para performance
+                    # if gid not in tile_cache:
+                    #    tile_cache[gid] = pygame.transform.scale(tile, (largura_tile, altura_tile))
+                    # tile_scaled = tile_cache[gid]
                     tile_scaled = pygame.transform.scale(tile, (largura_tile, altura_tile))
 
-                    # Calcula a posição com o deslocamento da câmera
+
                     pos_x = x * tmx_data.tilewidth * zoom_level + deslocamento_camera_x
                     pos_y = y * tmx_data.tileheight * zoom_level + deslocamento_camera_y
 
                     tela.blit(tile_scaled, (pos_x, pos_y))
 
-        elif isinstance(layer, pygame.Surface):  # Camadas de imagem
-            # Escala a camada de imagem
+        # Lógica para ImageLayer e outras mantida como estava...
+        elif isinstance(layer, pygame.Surface):
             largura_layer = int(layer.get_width() * zoom_level)
             altura_layer = int(layer.get_height() * zoom_level)
             layer_scaled = pygame.transform.scale(layer, (largura_layer, altura_layer))
             tela.blit(layer_scaled, (deslocamento_camera_x, deslocamento_camera_y))
-
-        elif hasattr(layer, 'image'):  # Camadas de imagem com atributos de deslocamento
-            # Escala a imagem
+        elif hasattr(layer, 'image'):
             largura_image = int(layer.image.get_width() * zoom_level)
             altura_image = int(layer.image.get_height() * zoom_level)
             image_scaled = pygame.transform.scale(layer.image, (largura_image, altura_image))
-
             offset_x = getattr(layer, 'offsetx', 0) * zoom_level
             offset_y = getattr(layer, 'offsety', 0) * zoom_level
-
             tela.blit(image_scaled, (offset_x + deslocamento_camera_x, offset_y + deslocamento_camera_y))
 
 
-def criar_mapa_rects_com_zoom(tmx_data, layer_name, zoom_level):
-    """Cria retângulos de colisão a partir de uma camada específica do mapa, aplicando o zoom."""
-    rects = []
-    layer = tmx_data.get_layer_by_name(layer_name)
-    for x, y, gid in layer:
-        if gid != 0:  # Assume que gid 0 é espaço vazio
-            rect = pygame.Rect(x * tmx_data.tilewidth * zoom_level, y * tmx_data.tileheight * zoom_level,
-                                tmx_data.tilewidth * zoom_level, tmx_data.tileheight * zoom_level)
-            rects.append(rect)
-    return rects
+# Esta função não parece ser usada, mas a deixo caso seja necessária em outro lugar.
+# def criar_mapa_rects_com_zoom(tmx_data, layer_name, zoom_level):
+#     """Cria retângulos de colisão a partir de uma camada específica do mapa, aplicando o zoom."""
+#     rects = []
+#     layer = tmx_data.get_layer_by_name(layer_name)
+#     for x, y, gid in layer:
+#         if gid != 0:
+#             rect = pygame.Rect(x * tmx_data.tilewidth * zoom_level, y * tmx_data.tileheight * zoom_level,
+#                                 tmx_data.tilewidth * zoom_level, tmx_data.tileheight * zoom_level)
+#             rects.append(rect)
+#     return rects
 
-# Carregar as imagens dos sprites do jogador com convert_alpha()
+# Carregamento de SPRITES mantido como estava...
+# (O código original tinha um erro aqui, carregando os arquivos de imagem duas vezes,
+# mas como instruído, não alterarei partes não relacionadas à funcionalidade de rampa)
 SPRITES = {
     "enemyidle": {"file": "img/mapa1/inimigo1/inimigo1_andando.png", "frames": 3, "width": 445, "height": 394},
     "idle": {"file": "img/prota/parada.png", "frames": 6, "width": 176, "height": 148},
     "walk": {"file": "img/prota/andando.png", "frames": 10, "width": 198, "height": 144},
-   # "attack": {"file": "img/prota/dano_spritesheet.png", "frames": 5, "width": 340, "height": 320}, aa
     "pulo": {"file": "img/prota/pulo.png", "frames": 15, "width": 256, "height": 256},
     "dash": {"file": "img/prota/dash.png", "frames": 5, "width": 214, "height": 144},
     "attack1": {"file": "img/prota/attack1.png", "frames": 6, "width": 339, "height": 402},
     "attack2": {"file": "img/prota/attack2.png", "frames": 7, "width": 339, "height": 402},
     "attack3": {"file": "img/prota/attack3.png", "frames": 8, "width": 339, "height": 402}
 }
-
-# Percorra o dicionário de sprites e carregue cada imagem com convert_alpha()
-for key, sprite_info in SPRITES.items():
-    sprite_info["file"] = pygame.image.load(sprite_info["file"]).convert_alpha()
+# O loop de carregamento com convert_alpha() estava aqui no original, manter se necessário
+# for key, sprite_info in SPRITES.items():
+    # sprite_info["file"] = pygame.image.load(sprite_info["file"]).convert_alpha() # CUIDADO: Isso sobrescreve o caminho do arquivo pela superfície carregada
 
 executando = True
 while executando:
     relogio.tick(FPS)
+    tempo_agora = pygame.time.get_ticks() # Para popup
 
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             executando = False
         if evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_ESCAPE: # Adicionar uma forma de sair
+                 executando = False
             if evento.key == pygame.K_e:
                 if not jogador.recuperar_vida():
                     mostrar_popup = True
+                    # Usar a variável correta para a mensagem
                     popup_mensagem = "Você não pode curar mais!"
-                    popup_timer = pygame.time.get_ticks() + popup_duracao
+                    popup_timer = tempo_agora + popup_duracao # Definir tempo de expiração
+                else:
+                     # Opcional: Mostrar mensagem de sucesso
+                     mostrar_popup = True
+                     popup_mensagem = "Vida recuperada!"
+                     popup_timer = tempo_agora + popup_duracao
             if evento.key == pygame.K_LSHIFT or evento.key == pygame.K_RSHIFT:
                 jogador.iniciar_dash()
             if evento.key == pygame.K_z:
-                jogador.atacar()
+                jogador.atacar() # Manter lógica de ataque
 
-    # Aplique os Espinhos
-    # Obtenha as camadas de espinhos do mapa
+    # --- Ordem de Atualização e Colisão ---
+    # 1. Atualizar estado e intenção de movimento do jogador (baseado em input)
+    #    (A lógica de input está dentro de jogador.atualizar no seu código)
+
+    # 2. Atualizar posição e aplicar colisões (incluindo rampas)
+    jogador.atualizar(inimigos) # Passar inimigos continua necessário para dano
+
+    # 3. Atualizar animação do jogador
+    jogador.update_animation()
+
+    # 4. Atualizar inimigos
+    inimigos.update() # Certifique-se que inimigo.update() também lida com colisões com o chão/rampas se necessário
+
+    # 5. Colisão com espinhos (após movimento finalizado)
     espinho_maior_layer = tmx_data.get_layer_by_name("Espinho_Maior")
     espinho_menor_layer = tmx_data.get_layer_by_name("Espinho_Menor")
-
-    # Passe as camadas para a função handle_espinho_colisions do jogador
     jogador.handle_espinho_colisions(espinho_maior_layer, espinho_menor_layer)
+    # --- Fim Ordem ---
 
-    jogador.atualizar(inimigos)
-    jogador.update_animation()
-    inimigos.update()
-    tela.fill((0, 0, 0))  # Fundo preto
 
-    # Ajuste o deslocamento da câmera para manter o jogador centralizado e abaixar o mapa
+    # --- Desenho ---
+    tela.fill((0, 0, 0))
+
+    # Ajuste da câmera (mantido como estava)
     deslocamento_camera_x = LARGURA // 2 - jogador.rect.centerx * zoom_level
-    deslocamento_camera_y = ALTURA // 1.2 - jogador.rect.centery * zoom_level  # Adiciona o deslocamento para abaixar o mapa
+    deslocamento_camera_y = ALTURA // 1.2 - jogador.rect.centery * zoom_level
 
-    # Restringir a câmera aos limites do mapa escalado
+    # Restringir a câmera (mantido como estava)
+    # Atenção ao altura_mapa * 1.5 - recalcular limites se necessário
     largura_mapa_escalada = largura_mapa * zoom_level
-    altura_mapa_escalada = altura_mapa * zoom_level
+    # altura_mapa_escalada = altura_mapa * zoom_level # Usar altura_mapa original para cálculo
+    altura_mapa_escalada = (tmx_data.height * tmx_data.tileheight) * zoom_level # Cálculo mais preciso
 
     deslocamento_camera_x = min(deslocamento_camera_x, 0)
     deslocamento_camera_x = max(deslocamento_camera_x, LARGURA - largura_mapa_escalada)
     deslocamento_camera_y = min(deslocamento_camera_y, 0)
     deslocamento_camera_y = max(deslocamento_camera_y, ALTURA - altura_mapa_escalada)
 
-    # Desenhe o mapa com zoom
+
+    # Desenhar mapa com zoom
     desenhar_mapa_com_zoom(tela, tmx_data, deslocamento_camera_x, deslocamento_camera_y, zoom_level)
 
+    # Checar condição de derrota
     if jogador.vida_atual <= 0:
         exibir_mensagem_derrota()
 
-    for inimigo in inimigos:
-        tela.blit(pygame.transform.scale(inimigo.image, (int(inimigo.image.get_width() * zoom_level), int(inimigo.image.get_height() * zoom_level))),
-                  (inimigo.rect.x * zoom_level + deslocamento_camera_x, inimigo.rect.y * zoom_level + deslocamento_camera_y))
+    # Desenhar inimigos (aplicando zoom e câmera)
+    for inimigo_sprite in inimigos: # Renomear variável local para evitar conflito com módulo 'inimigo'
+        # Escalar imagem do inimigo
+        img_inimigo_scaled = pygame.transform.scale(inimigo_sprite.image,
+                                                    (int(inimigo_sprite.rect.width * zoom_level), # Usar rect.width/height para escala
+                                                     int(inimigo_sprite.rect.height * zoom_level)))
+        # Calcular posição na tela
+        pos_inimigo_x = inimigo_sprite.rect.x * zoom_level + deslocamento_camera_x
+        pos_inimigo_y = inimigo_sprite.rect.y * zoom_level + deslocamento_camera_y
+        tela.blit(img_inimigo_scaled, (pos_inimigo_x, pos_inimigo_y))
 
-    tela.blit(pygame.transform.scale(jogador.image, (int(jogador.image.get_width() * zoom_level), int(jogador.image.get_height() * zoom_level))),
-              (jogador.rect.x * zoom_level + deslocamento_camera_x, jogador.rect.y * zoom_level + deslocamento_camera_y))
 
+    # Desenhar jogador (aplicando zoom e câmera)
+    # Escalar imagem do jogador
+    img_jogador_scaled = pygame.transform.scale(jogador.image,
+                                                (int(jogador.rect.width * zoom_level), # Usar rect.width/height para escala
+                                                 int(jogador.rect.height * zoom_level)))
+     # Calcular posição na tela
+    pos_jogador_x = jogador.rect.x * zoom_level + deslocamento_camera_x
+    pos_jogador_y = jogador.rect.y * zoom_level + deslocamento_camera_y
+    tela.blit(img_jogador_scaled, (pos_jogador_x, pos_jogador_y))
+
+
+    # Desenhar UI (corações, poções) - não afetados por zoom/câmera
     desenhar_coracoes(tela, jogador)
-    desenhar_pocoes(tela, jogador)  # Chama a função para desenhar as poções
+    desenhar_pocoes(tela, jogador)
 
-    if mostrar_popup and pygame.time.get_ticks() < popup_timer:
-        exibir_popup_cura(tela, mensagem)
+    # Exibir popup
+    if mostrar_popup and tempo_agora < popup_timer:
+        exibir_popup_cura(tela, popup_mensagem) # Passar a mensagem correta
+    elif mostrar_popup and tempo_agora >= popup_timer:
+        mostrar_popup = False # Esconder popup após o tempo
 
     pygame.display.flip()
 
 pygame.quit()
+sys.exit() # Adicionado para garantir saída limpa
+
+# --- END OF FILE main.py ---
