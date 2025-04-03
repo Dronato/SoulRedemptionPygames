@@ -60,5 +60,75 @@ Para iniciar o jogo, execute o seguinte comando no seu terminal:
 
 ```bash
 python SoulRedemption.py
+```
+## 🤝 Autores
 
+Agradecemos às seguintes pessoas que contribuíram para este projeto:
 
+<table>
+  <tr>
+    <td align="center">
+        <sub>
+          <b>Rafaela Botelho</b>
+          <br>
+          <a href="https://github.com/bruxa61">(github.com/bruxa61)</a>
+        </sub>
+    </td>
+    <td align="center">
+        <sub>
+          <b>Carlos Eduardo</b>
+          <br>
+          <a href="https://github.com/cDorth">(github.com/cDorth)</a>
+        </sub>
+    </td>
+    <td align="center">
+        <sub>
+          <b>Pedro Odake</b>
+          <br>
+         <a href="https://github.com/pe-odake">(github.com/pe-odake)</a>
+        </sub>
+    </td>
+    <td align="center">
+        <sub>
+          <b>Guilherme Pereira</b>
+           <br>
+          <a href="https://github.com/gprsilva">(github.com/gprsilva)</a>
+        </sub>
+    </td>
+    <td align="center">
+        <sub>
+          <b>Bruna Barboza</b>
+           <br>
+          <a href="https://github.com/brubsb">(github.com/brubsb)</a>
+        </sub>
+    </td>
+    <td align="center">
+        <sub>
+          <b>Davi Torralvo</b>
+           <br>
+         <a href="https://github.com/DaviTorralvo">(github.com/DaviTorralvo)</a>
+        </sub>
+    </td>
+    <td align="center">
+        <sub>
+          <b>Raí Carvalho</b>
+           <br>
+          <a href="https://github.com/Rai123100">(github.com/Rai123100)</a>
+        </sub>
+    </td>
+        <td align="center">
+        <sub>
+          <b>Arthur Américo</b>
+          <br>
+         <a href="https://github.com/intentdoor">(github.com/intentdoor)</a>
+        </sub>
+    </td>
+        <td align="center">
+        <sub>
+          <b>Matheus Vicente</b>
+           <br>
+          <a href="https://github.com/vicenteruedamatheus">(github.com/vicenteruedamatheus)</a>
+        </sub>
+    </td>
+  </tr>
+</table>
