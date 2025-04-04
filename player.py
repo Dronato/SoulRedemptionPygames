@@ -38,7 +38,7 @@ import pygame
 # ... (resto das constantes e dicionário SPRITES) ...
 
 class Jogador(pygame.sprite.Sprite):
-    def __init__(self, x, y, colisao_rects, rampas_esquerda_rects, rampas_direita_rects, tmx_data, zoom_level=2.0):
+    def __init__(self, x, y, colisao_rects, rampas_esquerda_rects, rampas_direita_rects,buraco_rects, tmx_data, zoom_level=2.0):
         super().__init__()
         self.state = IDLE
         self._sprites_cache = {} # Cache para superfícies de sprites carregadas
@@ -70,7 +70,8 @@ class Jogador(pygame.sprite.Sprite):
         # Timer para dano dos espinhos
         self.ultimo_dano_espinhos = 0
         self.intervalo_dano_espinhos = 1000
-
+        
+        self.buraco_rects = buraco_rects
         # Atributos de movimento e física
         self.vel_x = 0
         self.vel_y = 0
@@ -114,7 +115,17 @@ class Jogador(pygame.sprite.Sprite):
     # --- O resto do código da classe Jogador (load_sprites, atualizar, etc.) permanece o mesmo ---
     # ... (funções load_sprites, load_frames, receber_dano, etc.) ...
 
-
+    def check_buraco_collision(self):
+        """Verifica colisão do jogador com os retângulos da camada 'Buraco'."""
+        for buraco_rect in self.buraco_rects:
+            # Usar collision_rect para a física
+            if self.collision_rect.colliderect(buraco_rect):
+                self.vida_atual = 0  # Morte instantânea
+                self.caiu_no_buraco = True # Marca a causa da morte
+                print("Jogador caiu no buraco!") # Log
+                return True # Colidiu com um buraco
+        return False # Nenhuma colisão com buraco
+    
     def load_sprites(self):
         # Otimização: Usar um cache para não recarregar/redimensionar toda vez
         state_info = SPRITES[self.state]
@@ -384,7 +395,14 @@ class Jogador(pygame.sprite.Sprite):
 
         # --- Atualizar posição principal do rect baseado no collision_rect ---
         self.rect.midbottom = self.collision_rect.midbottom
-
+        
+        
+        if self.check_buraco_collision():
+            # Se colidiu com o buraco, a vida já foi zerada e a flag marcada.
+            # Podemos retornar aqui para evitar outras colisões/lógicas desnecessárias neste frame.
+            # Ou apenas deixar continuar, pois a verificação de derrota no main.py cuidará disso.
+            # Deixar continuar é mais simples.
+            pass
         # --- Verificações Finais ---
         # Condição de queda para fora do mapa (exemplo)
         # if self.rect.top > ALTURA + 200: # Usar ALTURA do mapa, não da tela

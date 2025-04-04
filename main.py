@@ -4,7 +4,7 @@ import pygame
 import sys
 from player import Jogador
 import inimigo
-from map_loader import carregar_mapa, desenhar_mapa, criar_mapa_rects # Manter criar_mapa_rects
+from map_loader import carregar_mapa, desenhar_mapa, criar_mapa_rects,criar_objetos_retangulos # Manter criar_mapa_rects
 
 # Inicializar Pygame
 pygame.init()
@@ -72,6 +72,15 @@ def exibir_mensagem_derrota():
     pygame.quit()
     sys.exit()
 
+def exibir_mensagem_buraco():
+    fonte = pygame.font.Font(None, 74)
+    texto = fonte.render("Você caiu no buraco!! Perdeu", True, VERMELHO) # Mensagem e cor diferentes
+    texto_rect = texto.get_rect(center=(LARGURA // 2, ALTURA // 2))
+    tela.blit(texto, texto_rect)
+    pygame.display.flip()
+    pygame.time.wait(2500) # Talvez um pouco mais de tempo
+    pygame.quit()
+    sys.exit()
 
 # Função para exibir pop-up de cura
 def exibir_popup_cura(tela, mensagem):
@@ -110,7 +119,7 @@ except ValueError:
     print("Aviso: Camada 'RampaParaDireita' não encontrada no mapa.")
     rampas_direita_rects = []
 # --- FIM NOVO ---
-
+buraco_rects = criar_objetos_retangulos(tmx_data, "Buraco")
 
 # Criar paredes de colisão (Manter como está, se necessário)
 espessura_parede = 1
@@ -127,7 +136,7 @@ jogador = Jogador(x=100, y=214,
                   colisao_rects=colisao_rects,
                   rampas_esquerda_rects=rampas_esquerda_rects, # Novo argumento
                   rampas_direita_rects=rampas_direita_rects,   # Novo argumento
-                  tmx_data=tmx_data,
+                  buraco_rects=buraco_rects,tmx_data=tmx_data,
                   zoom_level=zoom_level)
 # --- FIM ALTERADO ---
 
@@ -306,7 +315,11 @@ while executando:
 
     # Checar condição de derrota
     if jogador.vida_atual <= 0:
-        exibir_mensagem_derrota()
+        # Verifica SE a morte foi por queda no buraco usando a flag
+        if hasattr(jogador, 'caiu_no_buraco') and jogador.caiu_no_buraco:
+            exibir_mensagem_buraco() # Mostra mensagem específica
+        else:
+            exibir_mensagem_derrota()
 
     # Desenhar inimigos (aplicando zoom e câmera)
     for inimigo_sprite in inimigos: # Renomear variável local para evitar conflito com módulo 'inimigo'
