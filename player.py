@@ -111,6 +111,7 @@ class Jogador(pygame.sprite.Sprite):
         self.MAX_ATTACK_INTERVAL = 700
         # self.ataque_pressionado = False # Flag não usada?
         self.is_attacking = False
+        self.dano = 10
 
     # --- O resto do código da classe Jogador (load_sprites, atualizar, etc.) permanece o mesmo ---
     # ... (funções load_sprites, load_frames, receber_dano, etc.) ...
@@ -250,7 +251,7 @@ class Jogador(pygame.sprite.Sprite):
             self.pode_dash = False # Impede dash imediatamente após este terminar (será resetado)
             print("Iniciou Dash")
 
-    def atacar(self):
+    def atacar(self,inimigos):
         current_time = pygame.time.get_ticks()
         # Não atacar se já estiver atacando, dando dash ou em outra ação
         if self.is_attacking or self.dash_ativo:
@@ -272,6 +273,9 @@ class Jogador(pygame.sprite.Sprite):
                 self.is_attacking = True # Marcar que está atacando
                 self.load_sprites() # Carregar sprites do ataque
                 print(f"Iniciou ataque: {self.state}")
+            for inimigo in inimigos:
+                if self.rect.colliderect(inimigo.rect):
+                    inimigo.receber_dano(2, atacando=True)
             else:
                  print(f"Sprite para estado {next_attack_state} não encontrado.")
         else:

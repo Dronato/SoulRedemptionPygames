@@ -4,6 +4,7 @@ import pygame
 import sys
 from player import Jogador
 import inimigo
+from inimigo import Inimigo1mp1, Inimigo1mp2
 from map_loader import carregar_mapa, desenhar_mapa, criar_mapa_rects,criar_objetos_retangulos # Manter criar_mapa_rects
 
 # Inicializar Pygame
@@ -143,7 +144,7 @@ jogador = Jogador(x=100, y=214,
 todos_sprites = pygame.sprite.Group(jogador)
 
 mapas = {
-    "mapa1": {"inimigos": [inimigo.Inimigo1mp1(x=2950, y=0, colisao_rects= colisao_rects, tmx_data=tmx_data,largura_mapa = largura_mapa, altura_mapa= altura_mapa), inimigo.Inimigo1mp1(x=4150, y=214, colisao_rects= colisao_rects, tmx_data=None,largura_mapa = largura_mapa, altura_mapa= altura_mapa)]}
+    "mapa1": {"inimigos": [inimigo.Inimigo1mp1(x=2950, y=0,jogador=jogador, colisao_rects= colisao_rects, tmx_data=tmx_data,largura_mapa = largura_mapa, altura_mapa= altura_mapa), inimigo.Inimigo1mp2(x=4150, y=214,jogador=jogador, colisao_rects= colisao_rects, tmx_data=None,largura_mapa = largura_mapa, altura_mapa= altura_mapa)]}
 }
 # Criar inimigos
 inimigos = pygame.sprite.Group()
@@ -269,7 +270,7 @@ while executando:
             if evento.key == pygame.K_LSHIFT or evento.key == pygame.K_RSHIFT:
                 jogador.iniciar_dash()
             if evento.key == pygame.K_z:
-                jogador.atacar() # Manter lógica de ataque
+                jogador.atacar([*mapas[mapa_atual]["inimigos"]]) # Manter lógica de ataque
 
     # --- Ordem de Atualização e Colisão ---
     # 1. Atualizar estado e intenção de movimento do jogador (baseado em input)
@@ -282,7 +283,12 @@ while executando:
     jogador.update_animation()
 
     # 4. Atualizar inimigos
-    inimigos.update() # Certifique-se que inimigo.update() também lida com colisões com o chão/rampas se necessário
+    for inimigo_atual in inimigos:
+        if isinstance(inimigo_atual, Inimigo1mp2):
+            inimigo_atual.update()
+            inimigo_atual.detectar_jogador()
+        else:
+            inimigo_atual.update()
 
     # 5. Colisão com espinhos (após movimento finalizado)
     espinho_maior_layer = tmx_data.get_layer_by_name("Espinho_Maior")
