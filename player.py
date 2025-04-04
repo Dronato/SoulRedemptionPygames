@@ -410,65 +410,51 @@ class Jogador(pygame.sprite.Sprite):
                  return rect
         return None # Nenhuma colisão
 
-    # --- NOVO: Função para lidar com colisão de Rampa ---
+        # --- NOVO: Função para lidar com colisão de Rampa ---
     def handle_ramp_collision(self):
-        """Verifica e ajusta a posição do jogador em rampas."""
+        """Verifica e ajusta a posição do jogador em rampas com suavização e base melhorada."""
         player_center_x = self.collision_rect.centerx
         player_bottom = self.collision_rect.bottom
 
         collided_ramp = None
-        target_y = player_bottom # Y alvo inicial é a posição atual
+        target_y = player_bottom  # Y alvo inicial é a posição atual
 
-        # --- CORRIGIDO: Lógica para RampaParaEsquerda ( \ ) ---
-        # Sobe da direita para a esquerda (desce da esquerda para a direita)
-        for rampa in self.rampas_esquerda: # Iterar sobre os rects da camada RampaParaEsquerda
+        lerp_factor = 0.3  # Fator de suavização para interpolação linear
+        base_offset = 28  # Ajuste fino para evitar "quadradão" na base
+
+        # --- RampaParaEsquerda ( \ ) ---
+        for rampa in self.rampas_esquerda:
             if self.collision_rect.colliderect(rampa):
-                relative_x = player_center_x - rampa.left
-                relative_x = max(0, min(relative_x, rampa.width))
-
-                # A altura diminui conforme relative_x aumenta (vai para a direita)
-                # Equivalente a: altura aumenta conforme (rampa.width - relative_x) aumenta
-                altura_na_rampa = ((rampa.width  - relative_x) / rampa.width) * rampa.height + 21
+                relative_x = max(0, min(player_center_x - rampa.left, rampa.width))
+                altura_na_rampa = ((rampa.width - relative_x) / rampa.width) * rampa.height + base_offset
                 y_rampa_no_x = rampa.bottom - altura_na_rampa
 
-                # Condição de colisão (mesma de antes)
                 if player_bottom >= y_rampa_no_x - 1 and rampa.left <= player_center_x <= rampa.right:
                     if collided_ramp is None or y_rampa_no_x < target_y:
-                         target_y = y_rampa_no_x
-                         collided_ramp = rampa
-                         self.on_ramp = True
-                    # break # Opcional
+                        target_y = y_rampa_no_x
+                        collided_ramp = rampa
+                        self.on_ramp = True
 
-        # --- CORRIGIDO: Lógica para RampaParaDireita ( / ) ---
-        # Sobe da esquerda para a direita
-        for rampa in self.rampas_direita: # Iterar sobre os rects da camada RampaParaDireita
-             if self.collision_rect.colliderect(rampa):
-                 relative_x = player_center_x - rampa.left
-                 relative_x = max(0, min(relative_x, rampa.width))
+        # --- RampaParaDireita ( / ) ---
+        for rampa in self.rampas_direita:
+            if self.collision_rect.colliderect(rampa):
+                relative_x = max(0, min(player_center_x - rampa.left, rampa.width))
+                altura_na_rampa = (relative_x / rampa.width) * rampa.height + base_offset
+                y_rampa_no_x = rampa.bottom - altura_na_rampa
 
-                 # A altura aumenta conforme relative_x aumenta (vai para a direita)
-                 altura_na_rampa = (relative_x / rampa.width) * rampa.height + 21
-                 y_rampa_no_x = rampa.bottom - altura_na_rampa
+                if player_bottom >= y_rampa_no_x - 1 and rampa.left <= player_center_x <= rampa.right:
+                    if collided_ramp is None or y_rampa_no_x < target_y:
+                        target_y = y_rampa_no_x
+                        collided_ramp = rampa
+                        self.on_ramp = True
 
-                 # Condição de colisão (mesma de antes)
-                 if player_bottom >= y_rampa_no_x - 1 and rampa.left <= player_center_x <= rampa.right:
-                     if collided_ramp is None or y_rampa_no_x < target_y:
-                          target_y = y_rampa_no_x
-                          collided_ramp = rampa
-                          self.on_ramp = True
-                     # break # Opcional
-
-        # Aplica o ajuste final se colidiu com alguma rampa (mesmo de antes)
+        # --- Aplicação do Ajuste Suave ---
         if collided_ramp:
             if self.vel_y >= 0:
-                self.collision_rect.bottom = target_y
+                self.collision_rect.bottom += (target_y - self.collision_rect.bottom) * lerp_factor  # Suavização
                 self.vel_y = 0
                 self.no_chao = True
                 self.pulos_restantes = 2
-                # Se estava especificamente em uma rampa, podemos resetar pulos também
-                # self.pulos_restantes = 2 # Já está aqui
-
-    # --- FIM NOVO ---
 
 
     def update_animation(self):
