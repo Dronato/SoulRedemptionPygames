@@ -75,9 +75,9 @@ class Jogador(pygame.sprite.Sprite):
         # Atributos de movimento e física
         self.vel_x = 0
         self.vel_y = 0
-        self.velocidade = 3
+        self.velocidade = 5
         self.velocidade_dash = 7
-        self.forca_pulo = -15
+        self.forca_pulo = -10
         self.gravidade = 0.8
         self.no_chao = False
         self.on_ramp = False # Flag para indicar se está em uma rampa
@@ -441,8 +441,8 @@ class Jogador(pygame.sprite.Sprite):
         collided_ramp = None
         target_y = player_bottom  # Y alvo inicial é a posição atual
 
-        lerp_factor = 0.3  # Fator de suavização para interpolação linear
-        base_offset = 28  # Ajuste fino para evitar "quadradão" na base
+        lerp_factor = 0.5  # Fator de suavização para interpolação linear
+        base_offset = 24  # Ajuste fino para evitar "quadradão" na base
 
         # --- RampaParaEsquerda ( \ ) ---
         for rampa in self.rampas_esquerda:

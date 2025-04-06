@@ -1,10 +1,17 @@
 import pygame
 from pytmx.util_pygame import load_pygame
+import os 
 
 def carregar_mapa(nome_arquivo):
     """Carrega os dados do mapa Tiled."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    caminho_absoluto = os.path.join(base_dir, nome_arquivo)
+
+    print(f"[DEBUG] Tentando carregar: {caminho_absoluto}")
+    print(f"[DEBUG] Arquivo existe? {os.path.isfile(caminho_absoluto)}")
+
     try:
-        tmx_data = load_pygame(f"{nome_arquivo}")
+        tmx_data = load_pygame(caminho_absoluto)
         return tmx_data
     except FileNotFoundError:
         print(f"Erro: Mapa '{nome_arquivo}' não encontrado.")
