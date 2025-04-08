@@ -10,12 +10,12 @@
   <object id="7" type="Buraco" x="1151.33" y="474.667" width="225" height="2.67"/>
   <object id="8" type="Buraco" x="3999.33" y="473.667" width="161" height="2.67"/>
  </objectgroup>
- <objectgroup id="14" name="Porta">
-  <object id="17" type="Porta" x="5769" y="121" width="47" height="71"/>
- </objectgroup>
  <imagelayer id="3" name="Background">
   <image source="Background_2.png" width="5984" height="478"/>
  </imagelayer>
+ <objectgroup id="14" name="Porta">
+  <object id="17" type="Porta" x="5769" y="121" width="47" height="71"/>
+ </objectgroup>
  <layer id="15" name="Espinho_Menor" width="187" height="15">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

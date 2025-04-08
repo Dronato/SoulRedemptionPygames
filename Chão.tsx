@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <tileset version="1.10" tiledversion="1.11.2" name="Chão" tilewidth="16" tileheight="16" tilecount="348" columns="29">
- <image source="( D&amp;K ) Caves Tile V.2.png" width="464" height="192"/>
+ <image source="Tildset(Mapa_2).png" width="464" height="192"/>
  <tile id="103">
   <objectgroup>
    <object id="1" type="Colisão" x="0" y="0" width="16" height="16"/>
