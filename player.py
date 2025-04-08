@@ -38,7 +38,7 @@ import pygame
 # ... (resto das constantes e dicionário SPRITES) ...
 
 class Jogador(pygame.sprite.Sprite):
-    def __init__(self, x, y, colisao_rects, rampas_esquerda_rects, rampas_direita_rects,buraco_rects, tmx_data, zoom_level=2.0):
+    def __init__(self, x, y, colisao_rects, rampas_esquerda_rects, rampas_direita_rects,buraco_rects,lava_rects, tmx_data, zoom_level=2.0):
         super().__init__()
         self.state = IDLE
         self._sprites_cache = {} # Cache para superfícies de sprites carregadas
@@ -49,7 +49,8 @@ class Jogador(pygame.sprite.Sprite):
         self.animation_speed = 8
         self.frame_index = 0 # Definir frame_index inicial
         # --- FIM DAS DEFINIÇÕES MOVIDAS ---
-
+        self.LAVA_SINK_DURATION = 750  # Milissegundos (0.75 segundos) para afundar antes de morrer
+        self.LAVA_SINK_SPEED = 1.5 
         # Chamar load_sprites AGORA que facing_right existe
         self.load_sprites()
         # self.frame_index = 0 # frame_index já foi definido antes e resetado em load_sprites se necessário
@@ -72,6 +73,10 @@ class Jogador(pygame.sprite.Sprite):
         self.intervalo_dano_espinhos = 1000
         
         self.buraco_rects = buraco_rects
+        self.lava_rects = lava_rects
+        self.morreu_queimado = False
+        self.sinking_in_lava = False         # <-- NOVO: Flag para indicar afundamento
+        self.lava_sink_start_time = 0
         # Atributos de movimento e física
         self.vel_x = 0
         self.vel_y = 0
@@ -127,6 +132,29 @@ class Jogador(pygame.sprite.Sprite):
                 return True # Colidiu com um buraco
         return False # Nenhuma colisão com buraco
     
+    def check_lava_collision(self):
+        """Verifica colisão com 'Lava'. Inicia o processo de afundar."""
+        # Só checa se não estiver já afundando
+        if self.sinking_in_lava: return False
+
+        for lava_rect in self.lava_rects:
+            # Usar uma colisão um pouco mais generosa (ex: centro ou base do jogador)
+            # para iniciar o afundamento talvez um pouco antes
+            # check_point = self.collision_rect.midbottom
+            # if lava_rect.collidepoint(check_point):
+            if self.collision_rect.colliderect(lava_rect): # Manter colisão de rect por enquanto
+                if self.vida_atual > 0 and not self.sinking_in_lava: # Começa a afundar
+                    self.sinking_in_lava = True
+                    self.lava_sink_start_time = pygame.time.get_ticks()
+                    self.vel_x = 0 # Parar movimento horizontal ao cair na lava
+                    self.vel_y = self.LAVA_SINK_SPEED # Iniciar afundamento imediatamente
+                    print("Jogador começou a afundar na lava!")
+                    # Tocar som de lava?
+                    # Mudar para animação específica de lava?
+                    # self.state = "LAVA_SINK" # Se tiver animação
+                    # self.load_sprites()
+                    return True # Indica que tocou na lava
+        return False # Não tocou ou já estava afundando
     def load_sprites(self):
         # Otimização: Usar um cache para não recarregar/redimensionar toda vez
         state_info = SPRITES[self.state]
@@ -289,6 +317,58 @@ class Jogador(pygame.sprite.Sprite):
 
         # --- Resetar flags no início de cada atualização ---
         self.on_ramp = False # Resetar flag de rampa
+        if self.sinking_in_lava:
+            # 1. Verificar Timer de Morte
+            if tempo_atual - self.lava_sink_start_time > self.LAVA_SINK_DURATION:
+                if self.vida_atual > 0: # Só mata uma vez
+                    self.vida_atual = 0
+                    self.morreu_queimado = True
+                    self.sinking_in_lava = False # Para de afundar logicamente
+                    print("Jogador morreu na lava (timer expirou)")
+                # Não precisa retornar aqui, a checagem de vida <= 0 no main fará o resto
+
+            # 2. Se ainda não morreu, continuar afundando
+            else:
+                self.vel_x = 0 # Garante que não se mova para os lados
+                self.vel_y = self.LAVA_SINK_SPEED # Força velocidade para baixo
+                self.no_chao = False # Garante que não está "no chão"
+                self.on_ramp = False # Garante que não está na rampa
+
+                # Aplicar movimento vertical (afundando)
+                self.collision_rect.y += self.vel_y
+
+                # Atualizar posição principal do rect visual
+                self.rect.midbottom = self.collision_rect.midbottom
+
+                # Atualizar animação (se houver uma específica) ou apenas a imagem
+                self.update_animation() # Continua animando o estado atual (ou poderia forçar um estado)
+
+                # Opcional: Aplicar efeito visual (tint)
+                try:
+                    # Criar uma cópia para não afetar o cache/frames originais
+                    tinted_image = self.frames[self.frame_index].copy()
+                    # Aplicar uma cor vermelha/laranja semi-transparente
+                    # A intensidade do alfa (último valor) controla o quão forte é o tint
+                    alpha = min(200, 50 + int((tempo_atual - self.lava_sink_start_time) / self.LAVA_SINK_DURATION * 150)) # Aumenta alpha
+                    tint_surface = pygame.Surface(tinted_image.get_size(), pygame.SRCALPHA)
+                    tint_surface.fill((255, 60, 0, alpha)) # Laranja/vermelho, alpha variável
+                    tinted_image.blit(tint_surface, (0, 0))
+                    self.image = tinted_image # Atualiza a imagem a ser desenhada
+                    # Flip se necessário
+                    if not self.facing_right:
+                        self.image = pygame.transform.flip(self.image, True, False)
+                except IndexError:
+                     print(f"AVISO: Índice de frame {self.frame_index} inválido ao tentar aplicar tint de lava.")
+                     # Usar a imagem base sem tint neste caso
+                     self.image = self.frames[0].copy() if self.frames else self._create_fallback_surface()
+                     if not self.facing_right:
+                         self.image = pygame.transform.flip(self.image, True, False)
+                except Exception as e:
+                     print(f"Erro inesperado ao aplicar tint de lava: {e}")
+
+
+                # Pular o resto da lógica de atualização normal
+                return        
 
         # --- Lógica de Estados e Input ---
         if self.is_attacking:
@@ -402,11 +482,12 @@ class Jogador(pygame.sprite.Sprite):
         
         
         if self.check_buraco_collision():
-            # Se colidiu com o buraco, a vida já foi zerada e a flag marcada.
-            # Podemos retornar aqui para evitar outras colisões/lógicas desnecessárias neste frame.
-            # Ou apenas deixar continuar, pois a verificação de derrota no main.py cuidará disso.
-            # Deixar continuar é mais simples.
-            pass
+            # Morte já tratada dentro da função check_buraco_collision
+            # Não precisa fazer mais nada aqui, a checagem em main.py.run() pegará vida <= 0
+             pass
+        elif self.check_lava_collision(): # Usar elif para evitar checar lava se já caiu no buraco
+            # Morte já tratada dentro da função check_lava_collision
+             pass
         # --- Verificações Finais ---
         # Condição de queda para fora do mapa (exemplo)
         # if self.rect.top > ALTURA + 200: # Usar ALTURA do mapa, não da tela

@@ -9,7 +9,7 @@ import player
 import inimigo
 # Ajuste os imports de inimigo conforme necessário
 from inimigo import Inimigo1mp1, Inimigo1mp2 # Exemplo para mapa 1
-# from inimigo import InimigoTipoA, InimigoTipoB # Exemplo para mapa 2
+# from inimigo import InimigoTipoA, InimigoTipoB # Exemplo para mapa 2 (precisaria existir em inimigo.py)
 from map_loader import carregar_mapa, desenhar_mapa, criar_mapa_rects, criar_objetos_retangulos
 
 pygame.init()
@@ -119,7 +119,7 @@ class Game:
         self.rampas_direita_rects = []
         self.buraco_rects = []
         self.porta_rects = []
-        self.lava_rects = [] # Adicionado se precisar de lógica específica para lava depois
+        self.lava_rects = [] # Inicializa lista de rects de lava
 
         self.jogador = None
         self.inimigos = pygame.sprite.Group()
@@ -137,6 +137,10 @@ class Game:
         self.popup_duracao = 1500
 
         self.mostrar_prompt_porta = False
+
+        # Referências às camadas de perigo (serão preenchidas em start_game)
+        self.espinho_maior_layer = None
+        self.espinho_menor_layer = None
 
         print("DEBUG: Game.__init__ concluído.")
 
@@ -250,26 +254,23 @@ class Game:
             camadas_mapa_atual = [
                 "Background", "Fundo", "Chão", "RampaParaEsquerda",
                 "RampaParaDireita","FiguraPorta", "Espinho_Maior", "Espinho_Menor",
-                 # "Porta" # Não desenhar a camada de objeto da porta
             ]
         elif self.mapa_atual_path == "Mapa(2).tmx":
-            # Camadas visuais do Mapa 2, baseadas nos seus nomes
-            # Ajuste a ORDEM conforme necessário (fundo -> frente)
+            # Camadas visuais do Mapa 2
+            # A ordem importa! Desenha do fundo para a frente.
             camadas_mapa_atual = [
-                "Background",
-                "Detalhes",            # Tile sem colisão (visual)
-                "Fundo",               # Tile COM colisão (visual)
-                "Lava",                # Tile COM colisão (visual)
-                "Representacao_Porta"
-                
-                # Tile sem colisão (visual)
-                # "Buraco" (Objeto) e "Porta" (Objeto) não são desenhados aqui
+                "Background",          # Camada de imagem de fundo
+                "Detalhes",            # Tiles decorativos (sem colisão)
+                "Fundo",               # Tiles sólidos (desenhados)
+                               # Tiles de lava (desenhados, mas sem colisão sólida)
+                "Representacao_Porta",
+                "Lava"
+                # Tiles da porta (sem colisão)
             ]
         else:
             print(f"AVISO: Nenhuma camada de desenho definida para o mapa: {self.mapa_atual_path}")
 
-        # Restante da função desenhar_mapa_com_zoom permanece igual...
-        # ... (código de cálculo de área visível, loop pelas camadas, desenho de tiles e imagens)
+        # Área visível na tela (em coordenadas do mundo) para otimização (culling)
         tela_rect_mundo = pygame.Rect(
             -self.deslocamento_camera_x / self.zoom_level,
             -self.deslocamento_camera_y / self.zoom_level,
@@ -295,17 +296,23 @@ class Game:
                 for x, y, gid in layer:
                     if gid == 0: continue
                     tile_mundo_rect = pygame.Rect(x * tile_w_orig, y * tile_h_orig, tile_w_orig, tile_h_orig)
-                    if not tela_rect_mundo.colliderect(tile_mundo_rect): continue
+                    # Otimização: Verificar se o tile está na área visível
+                    if not tela_rect_mundo.colliderect(tile_mundo_rect):
+                        continue
 
                     tile_image = self.tmx_data.get_tile_image_by_gid(gid)
                     if tile_image:
                         try:
-                            if self.zoom_level != 1.0: tile_scaled = pygame.transform.scale(tile_image, (tile_w_scaled, tile_h_scaled))
-                            else: tile_scaled = tile_image
+                            if self.zoom_level != 1.0:
+                                tile_scaled = pygame.transform.scale(tile_image, (tile_w_scaled, tile_h_scaled))
+                            else:
+                                tile_scaled = tile_image
                             pos_x_tela = tile_mundo_rect.x * self.zoom_level + self.deslocamento_camera_x
                             pos_y_tela = tile_mundo_rect.y * self.zoom_level + self.deslocamento_camera_y
                             self.tela.blit(tile_scaled, (pos_x_tela, pos_y_tela))
-                        except (ValueError, pygame.error): pass
+                        except (ValueError, pygame.error) as scale_error:
+                            # print(f"Erro ao escalar tile da camada '{nome_camada}': {scale_error}")
+                            pass # Ignora o tile problemático
 
             # Camadas de Imagem
             elif hasattr(layer, 'image'):
@@ -315,16 +322,26 @@ class Game:
                      img_w_scaled = int(img_w_orig * self.zoom_level)
                      img_h_scaled = int(img_h_orig * self.zoom_level)
                      if img_w_scaled <= 0 or img_h_scaled <= 0: continue
+
                      offset_x_orig = getattr(layer, 'offsetx', 0)
                      offset_y_orig = getattr(layer, 'offsety', 0)
                      img_mundo_rect = pygame.Rect(offset_x_orig, offset_y_orig, img_w_orig, img_h_orig)
-                     if not tela_rect_mundo.colliderect(img_mundo_rect): continue
-                     if self.zoom_level != 1.0: img_scaled = pygame.transform.scale(img_orig, (img_w_scaled, img_h_scaled))
-                     else: img_scaled = img_orig
+
+                     # Otimização de visibilidade
+                     if not tela_rect_mundo.colliderect(img_mundo_rect):
+                         continue
+
+                     if self.zoom_level != 1.0:
+                         img_scaled = pygame.transform.scale(img_orig, (img_w_scaled, img_h_scaled))
+                     else:
+                         img_scaled = img_orig
+
                      pos_x_tela = offset_x_orig * self.zoom_level + self.deslocamento_camera_x
                      pos_y_tela = offset_y_orig * self.zoom_level + self.deslocamento_camera_y
                      self.tela.blit(img_scaled, (pos_x_tela, pos_y_tela))
-                 except (AttributeError, ValueError, pygame.error): pass
+                 except (AttributeError, ValueError, pygame.error) as img_layer_error:
+                      print(f"Erro ao processar camada de imagem '{nome_camada}': {img_layer_error}")
+                      pass
 
 
     def start_game(self, map_path):
@@ -344,7 +361,6 @@ class Game:
         self.tmx_data = None
         self.largura_mapa = 0
         self.altura_mapa_real = 0
-        # Resetar camadas de espinho referenciadas
         self.espinho_maior_layer = None
         self.espinho_menor_layer = None
 
@@ -363,57 +379,58 @@ class Game:
         # --- 3. Criar Retângulos de Colisão e Objetos (CONDICIONAL POR MAPA) ---
         print(f"DEBUG: Criando retângulos para {map_path}...")
 
-        # Variáveis para nomes de camadas (inicializar com None ou padrão)
-        chao_layers = [] # Usar lista para múltiplos chãos
+        # Variáveis para nomes de camadas
+        chao_layers = []
         rampa_e_layer = None
         rampa_d_layer = None
         buraco_layer = None
         porta_layer = None
         espinho_m_layer = None
         espinho_p_layer = None
-        lava_layer = None # Nome da camada de lava para colisão/dano
+        lava_layer = None # Nome da camada de lava para carregar os rects de perigo
 
         if map_path == "Mapa.tmx":
             # Camadas específicas do Mapa.tmx
-            chao_layers = ["Chão"] # Lista com a camada de chão
+            chao_layers = ["Chão"]
             rampa_e_layer = "RampaParaEsquerda"
             rampa_d_layer = "RampaParaDireita"
             buraco_layer = "Buraco" # Objeto
             porta_layer = "Porta"   # Objeto
             espinho_m_layer = "Espinho_Maior" # Tile
             espinho_p_layer = "Espinho_Menor" # Tile
-            # Posição inicial do jogador para Mapa.tmx
-            jogador_start_x, jogador_start_y = 100, 214
+            jogador_start_x, jogador_start_y = 100, 400
 
         elif map_path == "Mapa(2).tmx":
-            # Camadas específicas do Mapa(2).tmx (BASEADO NA SUA LISTA)
-            chao_layers = ["Fundo", "Lava"] # Camadas de Tile COM colisão
-            # rampa_e_layer = None # Assumindo sem rampas
-            # rampa_d_layer = None # Assumindo sem rampas
+            # --- AJUSTE AQUI ---
+            # Camadas sólidas: Apenas "Fundo"
+            chao_layers = ["Fundo"]
+            # -----------------
+            # Sem rampas ou espinhos neste mapa (assumindo)
+            rampa_e_layer = None
+            rampa_d_layer = None
+            espinho_m_layer = None
+            espinho_p_layer = None
+            # Camadas de perigo/interação
             buraco_layer = "Buraco" # Objeto
-            porta_layer = "Porta"   # Objeto (interação, sem colisão sólida)
-            # espinho_m_layer = None # Assumindo sem espinhos
-            # espinho_p_layer = None # Assumindo sem espinhos
-            lava_layer = "Lava" # Guardar nome para possível lógica de dano depois
-
-            # Posição inicial do jogador para Mapa(2).tmx
-            # TODO: AJUSTE ESTA POSIÇÃO CONFORME NECESSÁRIO!
-            jogador_start_x, jogador_start_y = 150, 100 # Exemplo, ajuste!
+            porta_layer = "Porta"   # Objeto
+            lava_layer = "Lava"     # Tile (Perigo, não sólido)
+            # Posição inicial
+            jogador_start_x, jogador_start_y = 70, 1250 # Ajuste conforme necessário
 
         else:
             print(f"ERRO: Configuração de camadas não definida para o mapa '{map_path}' em start_game.")
-            # Fallback para nomes padrão (pode causar erros se as camadas não existirem)
+            # Fallback
             chao_layers = ["Chão"]
             buraco_layer = "Buraco"; porta_layer = "Porta"
             jogador_start_x, jogador_start_y = 100, 100
 
-        # Carregar os rects usando os nomes definidos
-        # Colisões sólidas (Chão, Fundo, Lava, etc.)
+        # --- Carregar os rects ---
+        # Colisões sólidas
         self.colisao_rects = []
         for layer_name in chao_layers:
-             if layer_name: # Só carrega se o nome foi definido
-                 print(f"DEBUG: Carregando colisões da camada de tile: {layer_name}")
-                 self.colisao_rects.extend(criar_mapa_rects(self.tmx_data, layer_name))
+            if layer_name:
+                print(f"DEBUG: Carregando colisões sólidas da camada: {layer_name}")
+                self.colisao_rects.extend(criar_mapa_rects(self.tmx_data, layer_name))
 
         # Rampas
         if rampa_e_layer: self.rampas_esquerda_rects = criar_mapa_rects(self.tmx_data, rampa_e_layer)
@@ -423,16 +440,19 @@ class Game:
         if buraco_layer: self.buraco_rects = criar_objetos_retangulos(self.tmx_data, buraco_layer)
         if porta_layer: self.porta_rects = criar_objetos_retangulos(self.tmx_data, porta_layer)
 
-        # Guardar referências às camadas de perigo (Espinhos, Lava) para lógica de dano
+        # --- AJUSTE: Carregar Rects de Lava (Perigo) ---
+        if lava_layer:
+            print(f"DEBUG: Carregando retângulos de perigo (Lava) da camada: {lava_layer}")
+            self.lava_rects = criar_mapa_rects(self.tmx_data, lava_layer)
+        # ---------------------------------------------
+
+        # Guardar referências às camadas de espinhos (para colisão em player.py)
         try:
             if espinho_m_layer: self.espinho_maior_layer = self.tmx_data.get_layer_by_name(espinho_m_layer)
         except ValueError: print(f"AVISO: Camada de tiles '{espinho_m_layer}' não encontrada.")
         try:
             if espinho_p_layer: self.espinho_menor_layer = self.tmx_data.get_layer_by_name(espinho_p_layer)
         except ValueError: print(f"AVISO: Camada de tiles '{espinho_p_layer}' não encontrada.")
-        # Guardar rects da lava separadamente se precisar de lógica de dano específica
-        # if lava_layer: self.lava_rects = criar_mapa_rects(self.tmx_data, lava_layer)
-
 
         # Adicionar paredes limites
         espessura_parede = 5
@@ -445,6 +465,7 @@ class Game:
         print(f"DEBUG: Total de {len(self.colisao_rects)} rects de colisão sólida (incluindo limites).")
         print(f"DEBUG: {len(self.rampas_esquerda_rects)} rampas esquerda, {len(self.rampas_direita_rects)} rampas direita.")
         print(f"DEBUG: {len(self.buraco_rects)} rects de buraco, {len(self.porta_rects)} rects de porta.")
+        print(f"DEBUG: {len(self.lava_rects)} rects de lava (perigo).")
 
         # --- 4. Criar Jogador ---
         try:
@@ -454,6 +475,7 @@ class Game:
                 rampas_esquerda_rects=self.rampas_esquerda_rects,
                 rampas_direita_rects=self.rampas_direita_rects,
                 buraco_rects=self.buraco_rects,
+                lava_rects=self.lava_rects, # <-- PASSAR OS RECTS DA LAVA
                 tmx_data=self.tmx_data,
                 zoom_level=self.zoom_level
             )
@@ -543,26 +565,25 @@ class Game:
                     if evento.type == pygame.QUIT: executando = False
                     if evento.type == pygame.KEYDOWN:
                         if evento.key == pygame.K_ESCAPE: self.game_state = "MENU"
-                        elif evento.key == pygame.K_e:
-                             if colidindo_com_porta:
+                        elif evento.key == pygame.K_e: # Tecla 'E'
+                             if colidindo_com_porta: # Se está na porta E pressionou E
                                  print(f"DEBUG: Interação com porta! Mapa atual: {self.mapa_atual_path}")
                                  mapa_a_carregar = None
                                  if self.mapa_atual_path == "Mapa.tmx":
                                      mapa_a_carregar = self.proximo_mapa_path # Vai para Mapa(2).tmx
                                      print(f"DEBUG: Tentando carregar: {mapa_a_carregar}")
                                  elif self.mapa_atual_path == "Mapa(2).tmx":
-                                     # TODO: Definir para onde ir a partir do Mapa 2
-                                     # mapa_a_carregar = "Mapa.tmx" # Exemplo: Voltar para Mapa 1
-                                     mapa_a_carregar = None # Exemplo: Fim ou voltar pro menu
+                                     # TODO: Definir para onde ir a partir do Mapa 2 (se houver)
+                                     mapa_a_carregar = None # Ex: Fim ou voltar pro menu
                                      print("DEBUG: Fim do Mapa 2 ou transição não definida.")
 
                                  if mapa_a_carregar:
                                      self.start_game(mapa_a_carregar)
                                      if self.game_state != "PLAYING": executando = False
-                                     continue
+                                     continue # Pula para próximo frame após iniciar carregamento
                                  else:
                                      self.game_state = "MENU"; continue # Volta pro menu se não houver próximo mapa
-                             else:
+                             else: # Se pressionou E sem estar na porta -> Cura
                                 curou = self.jogador.recuperar_vida()
                                 msg = "Vida recuperada!" if curou else "Não foi possível curar!"
                                 self.exibir_popup(msg)
@@ -571,32 +592,48 @@ class Game:
                         # Debug keys...
 
                 # --- Atualizações do Jogo ---
-                if self.game_state == "PLAYING":
+                if self.game_state == "PLAYING": # Checar de novo caso evento tenha mudado
+                    # Atualizar Jogador (inclui checagem de buraco/lava agora)
                     self.jogador.atualizar(self.inimigos)
                     self.jogador.update_animation()
+
+                    # Atualizar Inimigos
                     for inimigo_atual in self.inimigos:
                         if hasattr(inimigo_atual, 'update') and callable(inimigo_atual.update):
                              inimigo_atual.update()
-                    if self.jogador:
-                        # Passar as camadas de perigo corretas
-                        self.jogador.handle_espinho_colisions(self.espinho_maior_layer, self.espinho_menor_layer)
-                        # TODO: Adicionar lógica de dano para lava se necessário
-                        # Ex: self.jogador.handle_lava_collision(self.lava_rects) # Precisaria criar esta função em player.py
 
-                    # Checar Derrota
+                    # Colisão com Espinhos (se o jogador ainda estiver vivo)
+                    if self.jogador and self.jogador.vida_atual > 0:
+                        self.jogador.handle_espinho_colisions(self.espinho_maior_layer, self.espinho_menor_layer)
+
+                    # --- Checar Derrota ---
                     if self.jogador.vida_atual <= 0:
-                        msg = "Você caiu no buraco!" if self.jogador.caiu_no_buraco else "Você Perdeu!"
-                        self.exibir_mensagem_final(msg, self.VERMELHO); continue
+                        msg = "Você Perdeu!" # Mensagem padrão
+                        cor = self.VERMELHO # Cor padrão
+
+                        # Verificar causa específica da morte (acessando flags do jogador)
+                        # Usar hasattr para segurança caso as flags não existam por algum motivo
+                        if hasattr(self.jogador, 'morreu_queimado') and self.jogador.morreu_queimado:
+                            msg = "Você morreu queimado!"
+                            # cor = (255, 100, 0) # Laranja para queimado? (Opcional)
+                        elif hasattr(self.jogador, 'caiu_no_buraco') and self.jogador.caiu_no_buraco:
+                            msg = "Você caiu no buraco!"
+
+                        self.exibir_mensagem_final(msg, cor)
+                        continue # Pula o desenho deste frame e vai pro próximo loop (que estará no MENU)
+
                     # Checar Vitória...
 
             # --- Desenho ---
-            self.tela.fill(self.PRETO)
+            self.tela.fill(self.PRETO) # Limpa a tela
 
-            if self.game_state == "MENU": self.main_menu.display_menu()
-            elif self.game_state == "CREDITS": self.credits_menu.display_menu()
+            if self.game_state == "MENU":
+                self.main_menu.display_menu()
+            elif self.game_state == "CREDITS":
+                self.credits_menu.display_menu()
             elif self.game_state == "PLAYING":
                 if self.jogador and self.tmx_data:
-                    # Cálculo da Câmera (sem alterações aqui) ...
+                    # --- Cálculo da Câmera ---
                     target_x = self.jogador.rect.centerx
                     target_y = self.jogador.rect.centery
                     self.deslocamento_camera_x = self.LARGURA / 2 - target_x * self.zoom_level
@@ -610,10 +647,11 @@ class Game:
                     if altura_mapa_escalada > self.ALTURA: self.deslocamento_camera_y = max(self.ALTURA - altura_mapa_escalada, self.deslocamento_camera_y)
                     else: self.deslocamento_camera_y = (self.ALTURA - altura_mapa_escalada) / 2
 
-                    # Desenhar Mapa com Zoom (agora usa a lista correta de camadas)
+                    # --- Desenhar Jogo ---
+                    # 1. Mapa com Zoom
                     self.desenhar_mapa_com_zoom()
 
-                    # Desenhar Sprites (sem alterações aqui) ...
+                    # 2. Todos os Sprites (Inimigos e Jogador)
                     sprites_para_desenhar = list(self.inimigos) + [self.jogador]
                     for sprite in sprites_para_desenhar:
                          if sprite:
@@ -629,9 +667,11 @@ class Game:
                                        if self.tela.get_rect().colliderect(sprite_tela_rect):
                                             self.tela.blit(img_scaled, (pos_x_tela, pos_y_tela))
                                             # Debug rects...
-                             except (AttributeError, ValueError, pygame.error): pass
+                             except (AttributeError, ValueError, pygame.error) as draw_error:
+                                  # print(f"Erro ao desenhar sprite {sprite}: {draw_error}")
+                                  pass
 
-                    # Desenhar UI
+                    # --- Desenhar UI ---
                     self.desenhar_coracoes()
                     self.desenhar_pocoes()
                     self.desenhar_popup()
@@ -639,8 +679,10 @@ class Game:
                         self.draw_text("Pressione E para próxima fase", 30, self.LARGURA // 2, self.ALTURA - 30, color=self.AMARELO, font_name=self.default_font_name, center=True)
                     # Debug info...
 
+            # Atualizar a tela inteira
             pygame.display.flip()
 
+        # Fim do loop while executando
         self.quit_game()
 
 
