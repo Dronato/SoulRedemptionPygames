@@ -69,6 +69,9 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         self.atacando = False  # Novo estado para verificar ataque
         self.dano = 1
 
+        self.tempo_ataque_inicio = 0
+        self.cooldown_ataque = 700  # em milissegundos (ex: 1 segundo)
+        self.preparando_ataque = False
 
 
         self.jogador = jogador
@@ -174,25 +177,38 @@ class Inimigo1mp1(pygame.sprite.Sprite):
 
 
         # Atualiza o sprite conforme a direção
-        self.image = pygame.transform.flip(self.frames[self.frame_index], True, False) 
-        
         if not self.facing_right:
             self.image = self.frames[self.frame_index]
+        else:
+            self.image = pygame.transform.flip(self.frames[self.frame_index], True, False)
+
+    def mudar_estado(self, novo_estado):
+        if self.state != novo_estado:
+            self.state = novo_estado
+            self.load_sprites()
+            self.frame_index = 0
+            self.image = pygame.transform.flip(self.frames[self.frame_index], True, False) 
+        
+            if not self.facing_right:
+                self.image = self.frames[self.frame_index]
 
     def patrulhar(self):
         if self.patrulhando:
-            self.state = INIMIGO1MP1IDLE
+            self.atacando = False
+            self.mudar_estado(INIMIGO1MP1IDLE)
         # Movimento de patrulha entre os pontos x_inicial e x_final
             if self.facing_right:
                 self.rect.x += self.velocidade_x
                 if self.rect.right >= self.x_final:  # Se chegar ao limite direito
                     self.rect.right = self.x_final  # Garantir que ele não ultrapasse o limite
                     self.facing_right = False  # Mudar a direção para a esquerda
+                    
             else:
                 self.rect.x -= self.velocidade_x
                 if self.rect.left <= self.x_inicial:  # Se chegar ao limite esquerdo
                     self.rect.left = self.x_inicial  # Garantir que ele não ultrapasse o limite
                     self.facing_right = True  # Mudar a direção para a direita
+                    
         else:
         # Caso não esteja patrulhando, ele apenas se move com a velocidade definida
            self.rect.x += self.velocidade_x
@@ -200,25 +216,25 @@ class Inimigo1mp1(pygame.sprite.Sprite):
     def atacar(self):
         distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
         """Método para iniciar o ataque."""
-        if distancia <= 20:
+        if distancia <= 33 or self.rect.colliderect(self.jogador.rect):
             self.patrulhando = False
             self.atacando = True
-            self.state = INIMIGO1MP1ATTACK
-            self.load_sprites()
-            self.atacando = True
-        if distancia >= 100:
+            self.mudar_estado(INIMIGO1MP1ATTACK)
+        else:
             self.atacando = False
+            self.patrulhando = True
             self.patrulhar()
 
     def perseguir(self):
-   
+        self.atacando = False
+        self.mudar_estado(INIMIGO1MP1IDLE)
         """Função de perseguição do inimigo."""
         if self.jogador.rect.centerx > self.rect.centerx:
             self.rect.x += self.velocidade_x  # Mover para a direita
             self.facing_right = True
-            self.state = INIMIGO1MP1IDLE
+            self.mudar_estado(INIMIGO1MP1IDLE)
         else:
-            self.state = INIMIGO1MP1IDLE
+            self.mudar_estado(INIMIGO1MP1IDLE)
             self.rect.x -= self.velocidade_x  # Mover para a esquerda
             self.facing_right = False
 
@@ -230,14 +246,42 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
         distanciab = abs(self.x_final - self.x_inicial)
 
-        if distancia <= 20 or self.rect.colliderect(self.jogador.rect):
-            self.atacar()
-        elif distancia <= distanciab:
-            self.perseguir()
-            self.patrulhando = False
-        else:
-            self.patrulhar()
+        if distancia >= distanciab:
             self.patrulhando = True
+            self.atacando = False
+            self.mudar_estado(INIMIGO1MP1IDLE)
+            self.patrulhar()
+        else:
+            self.patrulhando = False
+            self.mudar_estado(INIMIGO1MP1IDLE)
+            self.perseguir()
+
+            if distancia <= 33 or self.rect.colliderect(self.jogador.rect):
+                self.atacando = True
+                self.patrulhando = False
+                self.mudar_estado(INIMIGO1MP1ATTACK)
+                self.atacar()
+                
+                
+
+
+        # if distancia <= 28 or self.rect.colliderect(self.jogador.rect):
+        #     self.atacando = True
+        #     self.patrulhando = False
+        #     self.state = INIMIGO1MP1ATTACK
+        #     self.atacar()
+        # elif distancia <= distanciab:
+        #     self.patrulhando = False
+        #     self.atacando = False
+        #     self.state = INIMIGO1MP1IDLE
+        #     self.perseguir()
+
+        # else:
+        #     self.patrulhando = True
+        #     self.atacando = False
+        #     self.state = INIMIGO1MP1IDLE
+        #     self.patrulhar()
+
 
     # Aplicar gravidade
         self.velocidade_y += self.gravity
