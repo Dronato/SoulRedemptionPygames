@@ -28,12 +28,12 @@ def play_cutscene(video_path, tela, audio_path=None):
     tela = pygame.display.set_mode((video_width, video_height))
     pygame.display.set_caption("Cutscene")
 
-    arcade_font_path = os.path.join(os.path.dirname(__file__), "Arcade Gamer.ttf")
+    arcade_font_path = os.path.join(os.path.dirname(__file__), "ARCADE_N.ttf")
     if os.path.exists(arcade_font_path):
-        font = pygame.font.Font(arcade_font_path, 28)
+        font = pygame.font.Font(arcade_font_path, 16)
     else:
-        print("Fonte 'Arcade Gamer.ttf' não encontrada, usando fonte pixelada padrão.")
-        font = pygame.font.SysFont("Courier New", 28, bold=True)
+        print("Fonte 'ARCADE_N.ttf' não encontrada, usando fonte pixelada padrão.")
+        font = pygame.font.SysFont("Courier New", 16, bold=True)
 
     skip = False
     while cap.isOpened() and not skip:
@@ -46,7 +46,7 @@ def play_cutscene(video_path, tela, audio_path=None):
         tela.blit(frame_surface, (0, 0))
 
         # Texto "PULAR" no canto superior direito
-        text_surface = font.render("pular", True, (255, 255, 255))
+        text_surface = font.render("aperte enter para pular", True, (255, 255, 255))
         text_rect = text_surface.get_rect(topright=(video_width - 20, 20))
         tela.blit(text_surface, text_rect)
 
@@ -133,9 +133,37 @@ class MainMenu(Menu):
         self.last_toggle_time = pygame.time.get_ticks()
         self.toggle_interval = 500
 
+        # --- Fundo animado com frames ---
+        self.frames = []
+        self.current_frame = 0
+        self.frame_timer = 0
+        self.frame_interval = 40  # milissegundos por frame (10 FPS)
+
+        gif_folder = os.path.join(os.path.dirname(__file__), "gif")
+        if os.path.exists(gif_folder):
+            frame_files = sorted([
+                os.path.join(gif_folder, f)
+                for f in os.listdir(gif_folder)
+                if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+            ])
+            for frame_path in frame_files:
+                img = pygame.image.load(frame_path).convert()
+                img = pygame.transform.scale(img, (self.LARGURA, self.ALTURA))
+                self.frames.append(img)
+        else:
+            print("Pasta 'gif' com frames do fundo animado não encontrada.")
 
     def display_menu(self):
-        self.tela.blit(self.fundo_menu_scaled, (0, 0))
+        # Fundo animado
+        if self.frames:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.frame_timer > self.frame_interval:
+                self.current_frame = (self.current_frame + 1) % len(self.frames)
+                self.frame_timer = current_time
+            self.tela.blit(self.frames[self.current_frame], (0, 0))
+        else:
+            self.tela.blit(self.fundo_menu_scaled, (0, 0))
+
         current_time = pygame.time.get_ticks()
         if current_time - self.last_toggle_time > self.toggle_interval:
             self.blink_visible = not self.blink_visible
@@ -144,9 +172,7 @@ class MainMenu(Menu):
         # Lógica de piscar apenas o item selecionado
         if self.state == 'Start':
             if self.blink_visible:
-                # Desenha sombra (preto, deslocado)
                 self.draw_text('start', self.font_size_opcao, self.startx + 2, self.starty + 2, (120, 127, 143))
-                # Desenha texto principal (cor do menu)
                 self.draw_text('start', self.font_size_opcao, self.startx, self.starty)
         else:
             self.draw_text('start', self.font_size_opcao, self.startx, self.starty)

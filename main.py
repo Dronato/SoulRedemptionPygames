@@ -65,6 +65,7 @@ class Game:
         self.game_state = "MENU"
         self.fonts = {}
         self.default_font_name = None
+
         try:
             # Tenta encontrar uma fonte específica na pasta 'fonts'
             font_path_teste = os.path.join("fonts", "AncientModernTales.ttf") # <-- COLOQUE O NOME DA SUA FONTE TTF AQUI
@@ -145,6 +146,9 @@ class Game:
         self.popup_timer = 0
         self.popup_duracao = 1500
 
+        # fonte 
+        self.arcane_font_path = os.path.join("ARCADE_N.ttf")
+
         self.mostrar_prompt_porta = False
 
         # Referências às camadas de perigo (serão preenchidas em start_game)
@@ -176,15 +180,15 @@ class Game:
         return self.fonts[key]
 
 
-    def draw_text(self, text, size, x, y, color=(255, 255, 255), font_name=None, center=True):
+    def draw_text(self, text, size, x, y, color, font_name=None, center=False):
         try:
-            font = self.get_font(font_name, size)
+            font = pygame.font.Font(font_name, size) if font_name else pygame.font.SysFont(None, size)
             text_surface = font.render(text, True, color)
             text_rect = text_surface.get_rect()
             if center:
-                 text_rect.center = (int(x), int(y))
+                text_rect.center = (x, y)
             else:
-                 text_rect.topleft = (int(x), int(y))
+                text_rect.topleft = (x, y)
             self.tela.blit(text_surface, text_rect)
         except Exception as e:
             print(f"ERRO ao desenhar texto '{text}': {e}")
@@ -774,15 +778,16 @@ class Game:
                                   # print(f"Erro ao desenhar sprite {sprite}: {draw_error}")
                                   pass
 
-                    # --- Desenhar UI ---
+            
+# --- Desenhar UI ---
                     self.desenhar_coracoes()
                     self.desenhar_pocoes()
                     self.desenhar_popup()
                     if self.mostrar_msg_npc:
-                        self.draw_text("Pressione F para conversar", 30, self.LARGURA // 2, self.ALTURA - 30, color=self.AMARELO, font_name=self.default_font_name, center=True)
+                        self.draw_text("Pressione F para conversar", 16, self.LARGURA // 2, self.ALTURA - 30, color=self.AMARELO, font_name=self.arcane_font_path, center=True)
                     if self.mostrar_prompt_porta:
-                        self.draw_text("Pressione E para próxima fase", 30, self.LARGURA // 2, self.ALTURA - 30, color=self.AMARELO, font_name=self.default_font_name, center=True)
-                    # Debug info...
+                        self.draw_text("Pressione E para próxima fase", 16, self.LARGURA // 2, self.ALTURA - 30, color=self.AMARELO, font_name=self.arcane_font_path, center=True)
+                    
 
             # Atualizar a tela inteira
             pygame.display.flip()
