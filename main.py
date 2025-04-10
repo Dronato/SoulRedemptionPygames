@@ -561,7 +561,7 @@ class Game:
     def exibir_conversa(self):
     # Escurece o fundo
         overlay = pygame.Surface((self.LARGURA, self.ALTURA), pygame.SRCALPHA)
-        overlay.fill((60, 60, 60, 12))
+        overlay.fill((60, 60, 60, 10))
         self.tela.blit(overlay, (0, 0))
 
         if self.npc:  # Verifica se há um NPC com quem conversar
@@ -605,25 +605,26 @@ class Game:
                              colidindo_com_porta = True; break
                              
                 # CODIGO PARA APARECER O TEXTO DE CONVERSA COM NPC
-                self.mostrar_msg_npc = False
-                npc_proximo = None
-                distancia_limite = 100  # Distância máxima para interação
+                if self.mapa_atual_path == "Mapa.tmx":
+                    self.mostrar_msg_npc = False
+                    npc_proximo = None
+                    distancia_limite = 100  # Distância máxima para interação
 
-                jogador_x, jogador_y = self.jogador.rect.center
+                    jogador_x, jogador_y = self.jogador.rect.center
 
-                for npc in [self.npc_A, self.npc_F]:
-                    npc_x, npc_y = npc.rect.center
-                    distancia = ((jogador_x - npc_x) ** 2 + (jogador_y - npc_y) ** 2) ** 0.5
+                    for npc in [self.npc_A, self.npc_F]:
+                        npc_x, npc_y = npc.rect.center
+                        distancia = ((jogador_x - npc_x) ** 2 + (jogador_y - npc_y) ** 2) ** 0.5
 
-                    if distancia < distancia_limite:
-                        self.mostrar_msg_npc = True
-                        npc_proximo = npc
-                        break
+                        if distancia < distancia_limite:
+                            self.mostrar_msg_npc = True
+                            npc_proximo = npc
+                            break
 
-                if npc_proximo:
-                    self.npc = npc_proximo  
-                else:
-                    self.npc = None  
+                    if npc_proximo:
+                        self.npc = npc_proximo  
+                    else:
+                        self.npc = None  
 
                 for evento in eventos_frame:
                     if evento.type == pygame.QUIT: executando = False
@@ -690,8 +691,9 @@ class Game:
                     if self.em_conversa:
                         self.exibir_conversa()
                         continue 
-                    self.npc_A.atualizar()
-                    self.npc_F.atualizar()
+                    if self.mapa_atual_path == "Mapa.tmx":
+                        self.npc_A.atualizar()
+                        self.npc_F.atualizar()
                     
                     # Atualizar Inimigos
                     for inimigo_atual in self.inimigos:

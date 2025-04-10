@@ -80,9 +80,9 @@ class Jogador(pygame.sprite.Sprite):
         # Atributos de movimento e física
         self.vel_x = 0
         self.vel_y = 0
-        self.velocidade = 5
+        self.velocidade = 20
         self.velocidade_dash = 7
-        self.forca_pulo = -10
+        self.forca_pulo = -13
         self.gravidade = 0.8
         self.no_chao = False
         self.on_ramp = False # Flag para indicar se está em uma rampa
