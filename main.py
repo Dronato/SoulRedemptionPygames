@@ -500,8 +500,12 @@ class Game:
             except Exception as e: print(f"Erro criando Inimigos (Mapa.tmx): {e}")
 
         elif map_path == "Mapa(2).tmx":
-             print("DEBUG: (TODO) Adicionar criação de inimigos/NPCs para Mapa(2).tmx.")
-             pass
+            try:
+                inimigo3 = inimigo.Inimigo2mp2(x=678, y=1150, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
+                lista_inimigos_mapa.extend([inimigo3])
+                print(f"[DEBUG] Inimigo2mp2 criado no mapa: {id(inimigo3)}")
+            except Exception as e: print(f"ERRO ao criar inimigos para Mapa.tmx: {e}")
+
         # <<< ADICIONADO: Criação de entidades para SalaBoss.tmx >>>
         elif map_path == "SalaBoss.tmx":
              print(f"DEBUG: Criando Boss em ({self.boss_start_x},{self.boss_start_y})...")
@@ -844,21 +848,28 @@ class Game:
                     self.desenhar_mapa_com_zoom()
                     # 2. Sprites (com zoom)
                     for sprite in self.todos_sprites:
-                         if sprite and hasattr(sprite, 'image') and sprite.image:
-                             try:
-                                  img = sprite.image # Pega a imagem atualizada
-                                  w_z = int(sprite.rect.width * self.zoom_level)
-                                  h_z = int(sprite.rect.height * self.zoom_level)
-                                  if w_z > 0 and h_z > 0:
-                                       img_scaled = pygame.transform.scale(img, (w_z, h_z))
-                                       px = sprite.rect.x * self.zoom_level + cam_x
-                                       py = sprite.rect.y * self.zoom_level + cam_y
-                                       sprite_rect_tela = pygame.Rect(px, py, w_z, h_z)
-                                       # Desenhar se visível
-                                       if self.tela.get_rect().colliderect(sprite_rect_tela):
-                                            self.tela.blit(img_scaled, sprite_rect_tela.topleft)
-                             except: pass # Ignora erros de desenho
-                         if isinstance(sprite, BossFinal):
+                            if isinstance(sprite, (inimigo.Inimigo2mp2, inimigo.ProjetilGeleia)):
+                                sprite.draw(
+                                    self.tela,
+                                    zoom=self.zoom_level,
+                                    deslocamento_x=self.deslocamento_camera_x,
+                                    deslocamento_y=self.deslocamento_camera_y
+                                )
+                            else:
+                                try:
+                                    img = sprite.image # Pega a imagem atualizada
+                                    w_z = int(sprite.rect.width * self.zoom_level)
+                                    h_z = int(sprite.rect.height * self.zoom_level)
+                                    if w_z > 0 and h_z > 0:
+                                        img_scaled = pygame.transform.scale(img, (w_z, h_z))
+                                        px = sprite.rect.x * self.zoom_level + cam_x
+                                        py = sprite.rect.y * self.zoom_level + cam_y
+                                        sprite_rect_tela = pygame.Rect(px, py, w_z, h_z)
+                                        # Desenhar se visível
+                                        if self.tela.get_rect().colliderect(sprite_rect_tela):
+                                                self.tela.blit(img_scaled, sprite_rect_tela.topleft)
+                                except: pass # Ignora erros de desenho
+                            if isinstance(sprite, BossFinal):
                               if sprite.is_melee_active:
                                    melee_box_mundo = sprite.get_melee_hitbox()
                                    if melee_box_mundo:

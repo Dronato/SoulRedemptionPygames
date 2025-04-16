@@ -31,6 +31,14 @@ INIMIGO1MP2DANO = "inimigo 1 do mapa 2 sofrendo dano"
 INIMIGO1MP2MORTO = "inimigo 1 do mapa 2 morto"
 INIMIGO1MP2CARREGANDO = "inimigo1 do mapa 2 carregando o ataque"
 
+# Geleia/Slime
+INIMIGO2MP2 = "inimigo 2 do mapa 2"
+INIMIGO2MP2IDLE = "enemyidle"
+INIMIGO2MP2ATTACK = "ataque do inimigo 2 do mapa 2"
+INIMIGO2MP2DANO = "inimigo 2 do mapa 2 sofrendo dano"
+INIMIGO2MP2MORTO = "inimigo 2 do mapa 2 morto"
+INIMIGO2MP2CARREGANDO = "inimigo 2 do mapa 2 carregando o ataque"
+INIMIGO2MP2PROJETIL = "projetil lançado pelo inimigo 2 do mapa 2"
 
 # Estados do Boss
 BOSS_IDLE = "boss_idle"
@@ -61,7 +69,14 @@ SPRITES = {
             INIMIGO1MP2DANO:{"file": "img/mapa2/inimigo1/inimigo1mp2_dano.png", "frames": 10, "width": 445, "height": 389},
             INIMIGO1MP2MORTO:{"file": "img/mapa2/inimigo1/inimigo1mp2_morto.png", "frames": 1, "width": 445, "height": 389},
             INIMIGO1MP2CARREGANDO:{"file": "img/mapa2/inimigo1/inimigo1mp2_carregandolaser.png", "frames": 13, "width": 400, "height": 400}
-            ,}
+            ,},
+        INIMIGO2MP2:{
+            INIMIGO2MP2IDLE:{"file": "img/mapa2/inimigo2/inimigo2mp2_andando.png", "frames": 6, "width": 129, "height": 91}, 
+            INIMIGO2MP2ATTACK:{"file": "img/mapa2/inimigo2/inimigo2mp2_ataque.png", "frames": 15, "width": 193, "height": 161},
+            INIMIGO2MP2DANO:{"file": "img/mapa2/inimigo2/inimigo2mp2_dano.png", "frames": 5, "width": 482, "height": 183},
+            INIMIGO2MP2MORTO:{"file": "img/mapa2/inimigo2/inimigo2mp2_morto.png", "frames": 11, "width": 482, "height": 183},
+            INIMIGO2MP2PROJETIL:{"file": "img/mapa2/inimigo2/inimigo2mp2_projetil.png", "frames": 1, "width": 134, "height": 136},
+        }
             },
 
 }
@@ -1239,3 +1254,284 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
 
     # --- draw (sem mudanças) ---
     def draw(self, surface): pass
+
+
+
+# ---------------------------------------------------------------------------------Inimigo_Geleia/Slime - (Rai - Pode reclamar)
+
+class ProjetilGeleia(pygame.sprite.Sprite):
+    def __init__(self, x, y, direcao, grupo_jogador, colisao_rects):
+        super().__init__()
+        self.colisao_rects = colisao_rects
+        try:
+            sprite_info = SPRITES[MAPA2][INIMIGO2MP2][INIMIGO2MP2PROJETIL]
+            sprite = pygame.image.load(sprite_info["file"]).convert_alpha()
+            sprite = pygame.transform.scale(sprite, (28, 28))
+        except:
+            sprite = pygame.Surface((40, 40), pygame.SRCALPHA)
+            pygame.draw.circle(sprite, (0, 255, 0), (20, 20), 20)
+
+        if direcao > 0:
+            sprite = pygame.transform.flip(sprite, True, False)
+
+
+        self.image = sprite
+        self.rect = self.image.get_rect(center=(x, y))
+        self.vel_x = 6 * direcao
+        self.dano = 1
+        self.grupo_jogador = grupo_jogador
+
+    def update(self):
+        self.rect.x += self.vel_x
+
+        # Colisão com jogador
+        atingidos = pygame.sprite.spritecollide(self, self.grupo_jogador, False, collided=pygame.sprite.collide_mask)
+        for jogador in atingidos:
+            jogador.receber_dano(self.dano)
+            self.kill()
+
+        # ✅ Colisão com o mapa (paredes)
+        for rect in self.colisao_rects:
+            if self.rect.colliderect(rect):
+                self.kill()
+                return
+
+        # Fora da tela
+        if self.rect.right < 0 or self.rect.left > LARGURA:
+            self.kill()
+
+# ---------------------------------------------------------------------------------
+
+class Inimigo2mp2(pygame.sprite.Sprite):
+    def __init__(self, x, y, jogador, colisao_rects, tmx_data, largura_mapa, altura_mapa):
+        super().__init__()
+        self.state = INIMIGO2MP2IDLE
+        self.frame_index = 0
+        self.animation_timer = 0
+        self.facing_right = True
+        self.velocidade_x = 1
+        self.velocidade_y = 0
+        self.gravity = 0.5
+        self.dano = 1
+        self.vida = 3
+
+        self.jogador = jogador
+        self.grupo_jogador = pygame.sprite.GroupSingle(jogador)
+        self.colisao_rects = colisao_rects
+        self.tmx_data = tmx_data
+        self.largura_mapa = largura_mapa
+        self.altura_mapa = altura_mapa
+
+        self.x_inicial = x
+        self.x_final = x + 201
+        self.grupo_projeteis = pygame.sprite.Group()
+
+        self.tempo_ataque = 0
+        self.etapa_ataque = None
+
+        self.frames = []
+        self.load_sprites()
+        self.image = self.frames[self.frame_index] if self.frames else pygame.Surface((32, 32))
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.offset_y_ataque = 0  # Correção de altura durante ataque
+
+    def load_sprites(self):
+        try:
+            sprite_info = SPRITES[MAPA2][INIMIGO2MP2][self.state]
+            self.sprite_sheet = pygame.image.load(sprite_info["file"]).convert_alpha()
+            self.frames = self.load_frames(sprite_info["frames"], sprite_info["width"], sprite_info["height"])
+        except Exception as e:
+            print(f"[Erro sprites]: {e}")
+            self.frames = [pygame.Surface((28, 28))]
+            self.frames[0].fill((255, 0, 0))
+
+    def load_frames(self, frame_count, width, height):
+        frames = []
+        for i in range(frame_count):
+            x = i * width
+            frame = self.sprite_sheet.subsurface(pygame.Rect(x, 0, width, height))
+
+            # Aumenta o tamanho da animação de morte
+            if self.state == INIMIGO1MP1IDLE:
+                frame = pygame.transform.scale(frame, (28, 28))  # ← maior
+            else:
+                frame = pygame.transform.scale(frame, (40, 40))
+
+            frames.append(frame)
+        return frames
+
+    def update_animation(self):
+        if not self.frames:
+            return
+
+        # Se for animação de morte, deixa mais lenta
+        if self.state == INIMIGO1MP1MORTO:
+            velocidade_anim = 10  # ← animação mais lenta
+        else:
+            velocidade_anim = 6
+
+        self.animation_timer += 1
+        if self.animation_timer >= velocidade_anim:
+            if self.state == INIMIGO1MP1MORTO:
+                # Avança até o último frame e para
+                if self.frame_index < len(self.frames) - 1:
+                    self.frame_index += 1
+            else:
+                self.frame_index = (self.frame_index + 1) % len(self.frames)
+
+            self.animation_timer = 0
+
+        frame = self.frames[self.frame_index]
+        self.image = pygame.transform.flip(frame, True, False) if self.facing_right else frame
+
+    def patrulhar(self):
+        self.state = INIMIGO2MP2IDLE
+        if self.facing_right:
+            self.rect.x += self.velocidade_x
+            if self.rect.right >= self.x_final:
+                self.rect.right = self.x_final
+                self.facing_right = False
+        else:
+            self.rect.x -= self.velocidade_x
+            if self.rect.left <= self.x_inicial:
+                self.rect.left = self.x_inicial
+                self.facing_right = True
+
+    def atacar(self):
+        agora = pygame.time.get_ticks()
+        if agora - self.tempo_ataque > 1000:  # tempo de recarga reduzido
+            self.tempo_ataque = agora
+            self.etapa_ataque = "carregando"
+            self.frame_index = 0
+
+            self.facing_right = self.jogador.rect.centerx > self.rect.centerx
+
+            # Salvar a posição dos pés antes de trocar o sprite
+            pos_pe = self.rect.bottom
+
+            self.state = INIMIGO2MP2ATTACK
+            self.load_sprites()
+
+            # Ajustar a nova posição para manter os pés no chão
+            self.rect = self.image.get_rect(midbottom=(self.rect.centerx, pos_pe))
+
+    def disparar_projétil(self):
+        self.facing_right = self.jogador.rect.centerx > self.rect.centerx  # virar para o jogador
+        direcao = 1 if self.facing_right else -1
+        proj = ProjetilGeleia(
+            self.rect.centerx,
+            self.rect.centery,
+            direcao,
+            self.grupo_jogador,
+            self.colisao_rects  # <<< adiciona os rects aqui
+        )
+
+        self.grupo_projeteis.add(proj)
+
+    def receber_dano(self, quantidade, atacando=False):
+        self.vida -= quantidade
+
+        # Se morreu
+        if self.vida <= 0:
+            self.vida = 0
+            self.state = INIMIGO2MP2MORTO
+            self.frame_index = 0
+            self.load_sprites()
+            return
+
+        # Se ainda está vivo, entra no estado de dano
+        self.state = INIMIGO2MP2DANO
+        self.frame_index = 0
+        self.load_sprites()
+
+        # ❌ Cancelar ataque se estava carregando
+        self.etapa_ataque = None
+
+    def update(self):
+        if self.state == INIMIGO2MP2DANO:
+            self.update_animation()
+
+            # Quando a animação de dano terminar, volta ao normal
+            if self.frame_index == len(self.frames) - 1:
+                self.state = INIMIGO2MP2IDLE
+                self.load_sprites()
+                self.frame_index = 0
+            return
+
+        if self.vida <= 0:
+            # Se estiver no estado de morte, anima até o fim e remove
+            if self.state == INIMIGO2MP2MORTO:
+                self.update_animation()
+                if self.frame_index == len(self.frames) - 1:
+                    self.kill()
+            return
+
+        distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
+        alinhado = abs(self.rect.centery - self.jogador.rect.centery) < 40
+        mesma_direcao = (
+            (self.facing_right and self.jogador.rect.centerx > self.rect.centerx) or
+            (not self.facing_right and self.jogador.rect.centerx < self.rect.centerx)
+        )
+        agora = pygame.time.get_ticks()
+
+        if self.etapa_ataque == "carregando":
+            if self.frame_index >= len(self.frames) - 1:
+                self.disparar_projétil()
+                self.etapa_ataque = None
+                self.state = INIMIGO2MP2IDLE
+                self.load_sprites()
+                self.frame_index = 0
+        elif distancia < 250 and alinhado and (agora - self.tempo_ataque > 1000):
+            self.atacar()
+        else:
+            self.patrulhar()
+
+        self.velocidade_y += self.gravity
+        self.rect.y += self.velocidade_y
+        colidiu = self.colisao_vertical()
+        if colidiu:
+            if self.velocidade_y > 0:
+                self.rect.bottom = colidiu.top
+            elif self.velocidade_y < 0:
+                self.rect.top = colidiu.bottom
+            self.velocidade_y = 0
+
+        self.grupo_projeteis.update()
+        self.update_animation()
+
+
+    def colisao_vertical(self):
+        for rect in self.colisao_rects:
+            if self.rect.colliderect(rect):
+                return rect
+        return None
+
+    def draw(self, surface, zoom=1.0, deslocamento_x=0, deslocamento_y=0):
+        # Desenhar o slime
+        scaled_image = pygame.transform.scale(
+            self.image,
+            (
+                int(self.image.get_width() * zoom),
+                int(self.image.get_height() * zoom)
+            )
+        )
+
+        pos_x = self.rect.x * zoom + deslocamento_x
+        # Ajuste vertical para ataque
+        offset_y = -8 if self.state == INIMIGO2MP2ATTACK else 0
+        pos_y = (self.rect.y + offset_y) * zoom + deslocamento_y
+        surface.blit(scaled_image, (pos_x, pos_y))
+
+
+        # ✅ Desenhar projéteis (usando o nome correto do grupo!)
+        for proj in self.grupo_projeteis:
+            proj_image = pygame.transform.scale(
+                proj.image,
+                (
+                    int(proj.image.get_width() * zoom),
+                    int(proj.image.get_height() * zoom)
+                )
+            )
+            proj_x = proj.rect.x * zoom + deslocamento_x
+            proj_y = proj.rect.y * zoom + deslocamento_y
+            surface.blit(proj_image, (proj_x, proj_y))
