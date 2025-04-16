@@ -1284,6 +1284,20 @@ class ProjetilGeleia(pygame.sprite.Sprite):
     def update(self):
         self.rect.x += self.vel_x
 
+        # Destruir projétil se o jogador estiver atacando e ele estiver no alcance do ataque
+        for jogador in self.grupo_jogador:
+            if hasattr(jogador, "atacando") and jogador.atacando:
+                # Definir uma área de ataque do jogador
+                if jogador.facing_right:
+                    area_ataque = pygame.Rect(jogador.rect.right, jogador.rect.top, 30, jogador.rect.height)
+                else:
+                    area_ataque = pygame.Rect(jogador.rect.left - 30, jogador.rect.top, 30, jogador.rect.height)
+
+                if self.rect.colliderect(area_ataque):
+                    self.kill()
+                    return
+
+
         # Colisão com jogador
         atingidos = pygame.sprite.spritecollide(self, self.grupo_jogador, False, collided=pygame.sprite.collide_mask)
         for jogador in atingidos:
@@ -1299,6 +1313,7 @@ class ProjetilGeleia(pygame.sprite.Sprite):
         # Fora da tela
         if self.rect.right < 0 or self.rect.left > LARGURA:
             self.kill()
+
 
 # ---------------------------------------------------------------------------------
 
@@ -1366,9 +1381,11 @@ class Inimigo2mp2(pygame.sprite.Sprite):
 
         # Se for animação de morte, deixa mais lenta
         if self.state == INIMIGO1MP1MORTO:
-            velocidade_anim = 10  # ← animação mais lenta
+            velocidade_anim = 8  
+        elif self.state == INIMIGO2MP2IDLE:
+            velocidade_anim = 5
         else:
-            velocidade_anim = 6
+            velocidade_anim = 2
 
         self.animation_timer += 1
         if self.animation_timer >= velocidade_anim:
@@ -1383,6 +1400,27 @@ class Inimigo2mp2(pygame.sprite.Sprite):
 
         frame = self.frames[self.frame_index]
         self.image = pygame.transform.flip(frame, True, False) if self.facing_right else frame
+
+    def linha_de_visao_livre(self):
+        # Pega o ponto central do inimigo e do jogador
+        x1, y1 = self.rect.center
+        x2, y2 = self.jogador.rect.center
+
+        # Divide a linha em passos para checar por obstáculos no caminho
+        passos = max(abs(x2 - x1), abs(y2 - y1))
+        if passos == 0:
+            return True  # mesmo ponto, sem obstáculos
+
+        for i in range(passos + 1):
+            t = i / passos
+            x = int(x1 + (x2 - x1) * t)
+            y = int(y1 + (y2 - y1) * t)
+
+            ponto = pygame.Rect(x, y, 1, 1)  # ponto de verificação como retângulo
+            for obstaculo in self.colisao_rects:
+                if ponto.colliderect(obstaculo):
+                    return False  # obstáculo na frente
+        return True  # caminho livre
 
     def patrulhar(self):
         self.state = INIMIGO2MP2IDLE
@@ -1481,7 +1519,7 @@ class Inimigo2mp2(pygame.sprite.Sprite):
                 self.state = INIMIGO2MP2IDLE
                 self.load_sprites()
                 self.frame_index = 0
-        elif distancia < 250 and alinhado and (agora - self.tempo_ataque > 1000):
+        elif distancia < 250 and alinhado and (agora - self.tempo_ataque > 1000) and self.linha_de_visao_livre():
             self.atacar()
         else:
             self.patrulhar()
