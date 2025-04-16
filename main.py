@@ -3,12 +3,16 @@ import cv2
 import pygame
 import sys
 import os
-
+import random # Importar random
+import math   # Importar math
+if pygame.display.get_init():
+    tela_info = pygame.display.get_info()
+    LARGURA, ALTURA = tela_info.current_w, tela_info.current_h
 # Importar componentes do jogo
 import player
 import inimigo
 # Ajuste os imports de inimigo conforme necessário
-from inimigo import Inimigo1mp1, Inimigo1mp2 # Exemplo para mapa 1
+from inimigo import Inimigo1mp1, Inimigo1mp2, BossFinal, BossProjectile, FallingObject
 from npc import NPC_Andy, NPC_Rafa
 # <<< ADICIONADO >>> Importar classe do Boss se existir (necessário para SalaBoss)
 # from inimigo import Boss # Descomente e ajuste quando tiver a classe Boss
@@ -130,6 +134,10 @@ class Game:
              print(f"ERRO CRÍTICO ao criar instâncias do Menu: {e}")
              self.quit_game()
 
+            #Boss 
+        self.boss_projectiles = pygame.sprite.Group()
+        self.boss_falling_objects = pygame.sprite.Group()
+        self.boss_instance = None # Referência ao boss atual
         # Variáveis de Jogo
         self.tmx_data = None
         self.largura_mapa = 0
@@ -369,6 +377,8 @@ class Game:
         # --- 1. Resetar Estado Anterior ---
         print("DEBUG: Resetando estado anterior...")
         self.inimigos.empty(); self.todos_sprites.empty()
+        self.boss_projectiles.empty(); self.boss_falling_objects.empty()
+        self.boss_instance = None
         self.jogador = None; self.npc_A = None; self.npc_F = None; self.npc = None
         self.colisao_rects = []; self.rampas_esquerda_rects = []; self.rampas_direita_rects = []
         self.buraco_rects = []; self.porta_rects = []; self.lava_rects = []
@@ -425,6 +435,9 @@ class Game:
             # Posição inicial (ajuste se necessário)
             jogador_start_x = self.largura_mapa // 2
             jogador_start_y = self.altura_mapa_real - 100
+
+            self.boss_start_x = self.largura_mapa - 200
+            self.boss_start_y = self.altura_mapa_real - 7   
             print("DEBUG: Camadas para SalaBoss.tmx definidas.")
         else:
             print(f"AVISO: Configuração de fallback para mapa desconhecido: {map_path}")
@@ -491,20 +504,25 @@ class Game:
              pass
         # <<< ADICIONADO: Criação de entidades para SalaBoss.tmx >>>
         elif map_path == "SalaBoss.tmx":
-             print("DEBUG: (TODO) Adicionar criação do Boss para SalaBoss.tmx.")
-             # Exemplo:
-             # try:
-             #     boss = Boss(x=self.largura_mapa/2, y=self.altura_mapa_real/2, ...)
-             #     lista_inimigos_mapa.append(boss)
-             # except NameError: print("ERRO: Classe Boss não importada/definida.")
-             # except Exception as e: print(f"Erro criando Boss: {e}")
-             pass
+             print(f"DEBUG: Criando Boss em ({self.boss_start_x},{self.boss_start_y})...")
+             try:
+                 # Passa os colisao_rects gerais (chão/paredes)
+                 self.boss_instance = BossFinal(x=self.boss_start_x, y=self.boss_start_y,
+                                                jogador=self.jogador,
+                                                colisao_rects=self.colisao_rects,
+                                                largura_mapa=self.largura_mapa,
+                                                altura_mapa=self.altura_mapa_real)
+                 lista_inimigos_mapa.append(self.boss_instance) # Adiciona à lista para grupos
+                 print("DEBUG: BossFinal criado.")
+             except NameError: print("ERRO CRÍTICO: Classe BossFinal não encontrada/importada.")
+             except Exception as e: print(f"Erro criando BossFinal: {e}")
+             
 
         # Adicionar inimigos aos grupos
         if lista_inimigos_mapa:
              self.inimigos.add(*lista_inimigos_mapa)
              self.todos_sprites.add(*lista_inimigos_mapa)
-             print(f"DEBUG: {len(lista_inimigos_mapa)} inimigos adicionados.")
+             print(f"DEBUG: {len(lista_inimigos_mapa)} inimigos/boss adicionados.")
 
         # --- 7. Finalizar Configuração ---
         self.deslocamento_camera_x = 0; self.deslocamento_camera_y = 0
@@ -657,9 +675,19 @@ class Game:
                                  elif self.mapa_atual_path == "Mapa(2).tmx":
                                      mapa_a_carregar = "SalaBoss.tmx" # <<< ADICIONADO >>>
                                  elif self.mapa_atual_path == "SalaBoss.tmx":
-                                     print("DEBUG: Interação com porta na Sala Boss -> Menu")
-                                     self.game_state = "MENU"; break # <<< ADICIONADO >>> Volta pro menu
-                                 # --- Fim da Modificação ---
+                                     # Só sai da sala do boss se ele foi derrotado?
+                                     if not self.boss_instance or self.boss_instance.is_dead:
+                                         print("DEBUG: Saindo da Sala Boss -> Créditos/Menu")
+                                        # AQUI VOCÊ DECIDE: ir para créditos, menu ou cutscene final
+                                         self.exibir_mensagem_final("VOCÊ VENCEU!", self.AMARELO) # Mostra vitória antes
+                                         self.game_state = "MENU" # Exemplo: volta ao menu
+                                         pygame.mixer.music.stop()
+                                         break
+                                     else:
+                                         self.exibir_popup("Derrote o chefe primeiro!")
+                                # --- Fim da Modificação ---
+
+                                     if self.game_state != "PLAYING": break # Se mudou de estado (MENU)
                                  
                                  if mapa_a_carregar:
                                      print(f"DEBUG: Carregando mapa: {mapa_a_carregar}")
@@ -697,9 +725,53 @@ class Game:
                         if self.npc_F: self.npc_F.atualizar()
                     # Atualizar Inimigos
                     self.inimigos.update() # Chama update() de todos os inimigos no grupo
-                    
+
+
+                    new_projectiles = pygame.sprite.Group()
+                    new_falling_objects = pygame.sprite.Group()
+                    if self.boss_instance and not self.boss_instance.is_dead:
+                         # Boss pode ter criado novos projéteis/objetos no seu update()
+                         new_projectiles.add(self.boss_instance.projectiles_group.sprites())
+                         new_falling_objects.add(self.boss_instance.falling_objects_group.sprites())
+                         # Limpa os grupos internos do boss para não adicionar duplicado
+                         self.boss_instance.projectiles_group.empty()
+                         self.boss_instance.falling_objects_group.empty()
+
+                    # Adiciona aos grupos globais
+                    self.boss_projectiles.add(new_projectiles)
+                    self.boss_falling_objects.add(new_falling_objects)
+                    self.todos_sprites.add(new_projectiles) # Adiciona para desenho
+                    self.todos_sprites.add(new_falling_objects) # Adiciona para desenho
+
+                    # 2. Atualizar Grupos Auxiliares (projéteis, objetos caindo)
+                    self.boss_projectiles.update(self.jogador) # Passa jogador para referência interna se necessário
+                    self.boss_falling_objects.update(self.jogador)
                     # Atualizar Animações (após lógica de estado)
-                    self.todos_sprites.update() # <<< Assume que player/inimigo/npc tem update para animação ou chama aqui >>>
+                    #
+                    # 
+                    # 
+                    # 
+                    # 
+                    # 
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    # self.todos_sprites.update() # <<< Assume que player/inimigo/npc tem update para animação ou chama aqui >>>
+
+
+
+
+
+
+
+
+
+
+
                     # Alternativa: chamar update_animation individualmente
                     # for sprite in self.todos_sprites:
                     #     if hasattr(sprite, 'update_animation'): sprite.update_animation()
@@ -707,6 +779,27 @@ class Game:
                     # Colisão com Espinhos
                     if self.jogador and self.jogador.vida_atual > 0:
                         self.jogador.handle_espinho_colisions(self.espinho_maior_layer, self.espinho_menor_layer)
+
+
+                    proj_hits = pygame.sprite.spritecollide(self.jogador, self.boss_projectiles, True, pygame.sprite.collide_mask)
+                    for proj in proj_hits:
+                         if self.jogador: self.jogador.receber_dano(proj.dano)
+                         # Efeito sonoro/visual de hit
+
+                    #   c) Jogador vs Objetos Caindo do Boss
+                    fall_hits = pygame.sprite.spritecollide(self.jogador, self.boss_falling_objects, True, pygame.sprite.collide_mask)
+                    for obj in fall_hits:
+                         if self.jogador: self.jogador.receber_dano(obj.dano)
+                         # Efeito sonoro/visual de hit
+
+                    #   d) Jogador vs Melee do Boss
+                    if self.boss_instance and self.boss_instance.is_melee_active and self.jogador:
+                         melee_hitbox = self.boss_instance.get_melee_hitbox()
+                         if melee_hitbox and self.jogador.collision_rect.colliderect(melee_hitbox):
+                              # Aplicar dano apenas uma vez por ativação do melee
+                              # (Pode precisar de um timer ou flag no jogador pós-hit)
+                              self.jogador.receber_dano(self.boss_instance.melee_dano)
+                              # Empurrar jogador?
 
                     # --- Checar Derrota ---
                     if self.jogador and self.jogador.vida_atual <= 0:
@@ -716,13 +809,15 @@ class Game:
                         elif hasattr(self.jogador, 'caiu_no_buraco') and self.jogador.caiu_no_buraco: causa = "Cuidado com o buraco!"
                         self.exibir_mensagem_final(causa, self.VERMELHO); continue
 
-                    # --- Checar Vitória (Exemplo) ---
-                    # if self.mapa_atual_path == "SalaBoss.tmx" and not self.inimigos: # Se na sala do boss e sem inimigos
-                    #     if self.jogador and self.jogador.vida_atual > 0: # Só vence se vivo
-                    #         pygame.mixer.music.stop(); self.musica_atual = None
-                    #         self.exibir_mensagem_final("VOCÊ VENCEU!", self.AMARELO)
-                    #         # self.game_state = "CREDITS" # Ou ir para créditos
-                    #         continue
+                    if self.mapa_atual_path == "SalaBoss.tmx" and self.boss_instance and self.boss_instance.is_dead:
+                         # Checa se a animação de morte terminou ou espera um pouco
+                         # Exemplo: espera 2 segundos após a morte antes de declarar vitória
+                         if tempo_agora - self.boss_instance.last_attack_time > 2000: # Reusa last_attack_time como tempo da morte
+                              if self.jogador and self.jogador.vida_atual > 0: # Só vence se vivo
+                                   pygame.mixer.music.stop(); self.musica_atual = None
+                                   self.exibir_mensagem_final("VOCÊ VENCEU!", self.AMARELO)
+                                   self.game_state = "MENU" # Ou CREDITS
+                                   continue
 
             # --- Desenho ---
             self.tela.fill(self.PRETO) # Limpa a tela
@@ -763,6 +858,17 @@ class Game:
                                        if self.tela.get_rect().colliderect(sprite_rect_tela):
                                             self.tela.blit(img_scaled, sprite_rect_tela.topleft)
                              except: pass # Ignora erros de desenho
+                         if isinstance(sprite, BossFinal):
+                              if sprite.is_melee_active:
+                                   melee_box_mundo = sprite.get_melee_hitbox()
+                                   if melee_box_mundo:
+                                       # Converter para coordenadas da tela
+                                       box_x_tela = melee_box_mundo.x * self.zoom_level + self.deslocamento_camera_x
+                                       box_y_tela = melee_box_mundo.y * self.zoom_level + self.deslocamento_camera_y
+                                       box_w_tela = melee_box_mundo.width * self.zoom_level
+                                       box_h_tela = melee_box_mundo.height * self.zoom_level
+                                       debug_rect_tela = pygame.Rect(box_x_tela, box_y_tela, box_w_tela, box_h_tela)
+                                       pygame.draw.rect(self.tela, (255, 0, 0, 100), debug_rect_tela, 2) # Vermelho semi-transparente
 
                     # 3. UI (HUD, Popups, Prompts)
                     self.desenhar_coracoes(); self.desenhar_pocoes(); self.desenhar_popup()
@@ -778,7 +884,23 @@ class Game:
                         elif self.mapa_atual_path == "SalaBoss.tmx": msg_porta = "Pressione E para sair"
                         # --- Fim da Modificação ---
                         self.draw_text(msg_porta, prompt_size, self.LARGURA // 2, prompt_y, self.AMARELO, self.arcane_font_path, center=True)
+                    if self.boss_instance and not self.boss_instance.is_dead:
+                         bar_width = self.LARGURA * 0.6
+                         bar_height = 25
+                         bar_x = (self.LARGURA - bar_width) / 2
+                         bar_y = 30
+                         hp_ratio = max(0, self.boss_instance.vida / self.boss_instance.vida_maxima)
+                         fill_width = bar_width * hp_ratio
 
+                         bg_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
+                         fill_rect = pygame.Rect(bar_x, bar_y, fill_width, bar_height)
+
+                         pygame.draw.rect(self.tela, (50, 0, 0), bg_rect) # Fundo vermelho escuro
+                         pygame.draw.rect(self.tela, self.VERMELHO, fill_rect) # Barra vermelha
+                         pygame.draw.rect(self.tela, self.BRANCO, bg_rect, 2) # Borda
+
+                         # Nome do Boss (opcional)
+                         self.draw_text("CHEFE FINAL", 20, self.LARGURA / 2, bar_y - 15, self.BRANCO, center=True)         
                     # 4. Interface de Conversa (se ativa)
                     if self.em_conversa: self.exibir_conversa()
 

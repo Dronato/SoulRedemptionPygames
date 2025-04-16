@@ -1,5 +1,6 @@
 import pygame
 import math
+import random
 
 
 
@@ -29,6 +30,19 @@ INIMIGO1MP2ATTACK = "ataque do inimigo 1 do mapa 2"
 INIMIGO1MP2DANO = "inimigo 1 do mapa 2 sofrendo dano"
 INIMIGO1MP2MORTO = "inimigo 1 do mapa 2 morto"
 INIMIGO1MP2CARREGANDO = "inimigo1 do mapa 2 carregando o ataque"
+
+
+# Estados do Boss
+BOSS_IDLE = "boss_idle"
+BOSS_WALK = "boss_walk" # Se ele se mover
+BOSS_CHARGE_FALLING = "boss_charge_falling"
+BOSS_ATTACK_FALLING = "boss_attack_falling"
+BOSS_CHARGE_PROJECTILE = "boss_charge_projectile"
+BOSS_ATTACK_PROJECTILE = "boss_attack_projectile"
+BOSS_CHARGE_MELEE = "boss_charge_melee"
+BOSS_ATTACK_MELEE = "boss_attack_melee"
+BOSS_HIT = "boss_hit"
+BOSS_DEATH = "boss_death"
 
 # Configuração dos sprites e frames
 SPRITES = {
@@ -847,3 +861,381 @@ class Inimigo1mp2(pygame.sprite.Sprite):
             pygame.draw.line(surface, (255, 255, 0), self.rect.center, self.alvo_travado, 3)
         if self.atacando and self.alvo_travado:
             pygame.draw.line(surface, (255, 0, 0), self.rect.center, self.alvo_travado, 6)
+
+class BossProjectile(pygame.sprite.Sprite):
+    """Projétil disparado pelo Boss."""
+    def __init__(self, x, y, target_x, target_y, speed, colisao_rects, dano=1):
+        super().__init__()
+        self.size = 25 # Tamanho do placeholder (um pouco maior)
+        self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+        pygame.draw.circle(self.image, (255, 0, 255), (self.size//2, self.size//2), self.size//2) # Magenta
+        pygame.draw.circle(self.image, (255, 255, 255), (self.size//2, self.size//2), self.size//2, 2) # Borda Branca
+        self.rect = self.image.get_rect(center=(x, y))
+        self.colisao_rects = colisao_rects
+        self.dano = dano
+        self.speed = speed
+        direction_x = target_x - x
+        direction_y = target_y - y
+        distance = math.hypot(direction_x, direction_y)
+        if distance == 0:
+            self.vel_x, self.vel_y = 0, -self.speed
+        else:
+            self.vel_x = (direction_x / distance) * self.speed
+            self.vel_y = (direction_y / distance) * self.speed
+        self.pos_x, self.pos_y = float(x), float(y)
+        print(f"[Projectile CREATED] @ ({x:.0f},{y:.0f})")
+
+    def update(self, jogador):
+        self.pos_x += self.vel_x
+        self.pos_y += self.vel_y
+        self.rect.center = (int(self.pos_x), int(self.pos_y))
+
+        # Colisão com cenário
+        for rect_colisao in self.colisao_rects:
+            if self.rect.colliderect(rect_colisao):
+                self.kill(); return
+
+        # Remoção se sair muito da área de jogo
+        tela_rect_margem = pygame.Rect(-LARGURA//2, -ALTURA//2, LARGURA*2, ALTURA*2) # Margem grande
+        if not tela_rect_margem.colliderect(self.rect):
+            print(f"[Projectile KILL] Off Screen: {self.rect.center}") # DEBUG
+            self.kill()
+
+
+class FallingObject(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
+    """Objeto que cai do céu."""
+    def __init__(self, x, y, speed, colisao_rects, altura_mapa, dano=1):
+        super().__init__()
+        self.width, self.height = 50, 75 # Tamanho placeholder (BEM MAIOR)
+        # --- Placeholder Visual (Amarelo Brilhante) ---
+        self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        self.image.fill((0,0,0,0))
+        rect_interno = self.image.get_rect()
+        pygame.draw.rect(self.image, (255, 255, 0), rect_interno) # Amarelo Brilhante
+        pygame.draw.rect(self.image, (0, 0, 0), rect_interno, 3) # Borda Preta Grossa
+        # --- Fim Placeholder ---
+        self.rect = self.image.get_rect(midbottom=(x, y))
+        self.colisao_rects = colisao_rects # Retângulos sólidos do mapa
+        self.dano = dano
+        self.speed = speed
+        self.altura_mapa = altura_mapa
+        print(f"[FallingObject CREATED] @ ({x:.0f},{y:.0f}) Speed:{speed}")
+
+    def update(self, jogador):
+        """Move o objeto para baixo e verifica colisões SOMENTE com o mapa."""
+        self.rect.y += self.speed
+        # print(f"[FallingObject UPDATE] Pos: {self.rect.midbottom}") # DEBUG
+
+        # Colisão com chão/plataformas (Apenas esta condição mata o objeto)
+        for rect_colisao in self.colisao_rects:
+            # Verifica colisão E se a base do objeto está tocando ou abaixo do topo da plataforma
+            if self.rect.colliderect(rect_colisao) and self.rect.bottom >= rect_colisao.top:
+                print(f"[FallingObject KILL] Ground Collision: {self.rect} vs {rect_colisao}") # DEBUG
+                self.kill()
+                return # Para de verificar colisões e de mover
+
+        # <<< REMOVIDO: Checagem de limite inferior para evitar kill prematuro >>>
+        # if self.rect.top > self.altura_mapa + 100:
+        #     print(f"[FallingObject KILL] Off Screen Bottom: {self.rect}") # DEBUG
+        #     self.kill()
+
+
+# ===============================================
+#      CLASSE PRINCIPAL DO BOSS (REFINADA)
+# ===============================================
+class FallingProjectile(pygame.sprite.Sprite):
+    """Projétil que cai verticalmente do céu, com aparência de projétil."""
+    def __init__(self, x, y_start,speed, colisao_rects, altura_mapa, dano=1):
+        super().__init__()
+        self.dano = dano
+        self.speed = speed
+        self.colisao_rects = colisao_rects # Retângulos sólidos do mapa (para colisão com chão)
+        self.altura_mapa = altura_mapa
+
+        # --- Aparência (similar ao BossProjectile ou customizada) ---
+        self.size = 25 # Tamanho do projétil
+        self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+        # Exemplo: Círculo amarelo com borda preta (para diferenciar do ataque azul/magenta)
+        pygame.draw.circle(self.image, (255, 255, 0), (self.size//2, self.size//2), self.size//2) # Amarelo
+        pygame.draw.circle(self.image, (0, 0, 0), (self.size//2, self.size//2), self.size//2, 2) # Borda Preta
+        # --- Fim Aparência ---
+
+        # Posição inicial: x aleatório, y fixo acima da tela
+        self.rect = self.image.get_rect(centerx=x, top=y_start) # Começa pelo topo
+
+        #print(f"[FallingProjectile CREATED] @ ({x:.0f},{y_start}) Speed:{speed}") # DEBUG opcional
+
+    def update(self, jogador): # 'jogador' não é usado diretamente aqui
+        """Move o projétil para baixo e verifica colisões com o chão/plataformas."""
+        self.rect.y += self.speed
+        #print(f"[FallingProjectile UPDATE] Pos: {self.rect.center}") # DEBUG opcional
+
+        # Colisão com chão/plataformas (kill())
+        for rect_colisao in self.colisao_rects:
+            # Verifica colisão e se está tocando/atravessando o topo da plataforma
+            if self.rect.colliderect(rect_colisao) and self.rect.bottom >= rect_colisao.top:
+                #print(f"[FallingProjectile KILL] Ground Collision: {self.rect} vs {rect_colisao}") # DEBUG opcional
+                self.kill()
+                return # Para de verificar após colidir
+
+        # Opcional: Remover se sair muito por baixo da tela (segurança)
+        if self.rect.top > self.altura_mapa + 200:
+            #print(f"[FallingProjectile KILL] Off Screen Bottom: {self.rect}") # DEBUG opcional
+            self.kill()
+
+class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
+    # --- __init__ (Garante que altura_mapa está sendo passada) ---
+    def __init__(self, x, y, jogador, colisao_rects, largura_mapa, altura_mapa):
+        super().__init__()
+        self.jogador = jogador
+        self.colisao_rects = colisao_rects
+        self.largura_mapa = largura_mapa
+        self.altura_mapa = altura_mapa # Essencial para FallingObject
+
+        self.vida_maxima = 150; self.vida = self.vida_maxima
+        self.facing_right = False; self.no_chao = True; self.is_dead = False
+        self.invulnerable_timer = 0; self.invulnerable_duration = 300
+
+        self.state = BOSS_IDLE; self.frames = {}; self.frames_atual = []
+        self.frame_index = 0; self.animation_timer = 0; self.animation_speed = 10
+        self.image = pygame.Surface((120, 180)); self.image.fill((50, 50, 50))
+        self.rect = self.image.get_rect(midbottom=(x, y))
+        self.load_all_sprites() # Garante placeholders se sprites reais falharem
+        self.change_state(BOSS_IDLE)
+
+        self.ai_state = 'IDLE'; self.attack_cooldown = 3000
+        self.last_attack_time = pygame.time.get_ticks() - self.attack_cooldown
+        self.charge_duration = 1000; self.action_start_time = 0
+        self.chosen_attack = None; self.hit_recovery_time = 400; self.last_hit_time = 0
+        self.use_falling_next = True
+
+        # <<< ATRIBUTOS PARA FALLING OBJECT AJUSTADOS >>>
+        self.falling_object_min_count = 6
+        self.falling_object_max_count = 8 # Ajustado para ser inclusivo no randint
+        self.falling_object_speed = 6 # Um pouco mais rápido
+        self.falling_attack_duration = 800
+        self.falling_objects_group = pygame.sprite.Group()
+
+        self.projectile_count = 2; self.projectile_speed = 7
+        self.projectile_interval = 300; self.projectiles_fired = 0
+        self.projectile_attack_animation_duration = 1000
+        self.projectiles_group = pygame.sprite.Group()
+
+        self.melee_range = 150; self.melee_hitbox_width = 150
+        self.melee_hitbox_height = 100; self.melee_hitbox_offset_x = 40
+        self.melee_dano = 2; self.is_melee_active = False; self.melee_attack_duration = 600
+
+    # --- _create_placeholder (sem mudanças) ---
+    def _create_placeholder(self, color, size=(120, 180)):
+        surf = pygame.Surface(size, pygame.SRCALPHA)
+        surf.fill(color)
+        pygame.draw.rect(surf, (255,255,255), surf.get_rect(), 1)
+        return surf
+
+    # --- load_all_sprites (sem mudanças significativas, apenas garante placeholders) ---
+    def load_all_sprites(self):
+        boss_sprites_def = SPRITES.get("BOSS_FINAL", {})
+        colors = {
+            BOSS_IDLE: (100, 100, 100), BOSS_WALK: (100, 100, 100),
+            BOSS_CHARGE_FALLING: (200, 200, 0), BOSS_ATTACK_FALLING: (255, 255, 0),
+            BOSS_CHARGE_PROJECTILE: (0, 0, 200), BOSS_ATTACK_PROJECTILE: (0, 0, 255),
+            BOSS_CHARGE_MELEE: (200, 0, 0), BOSS_ATTACK_MELEE: (255, 0, 0),
+            BOSS_HIT: (255, 128, 0), BOSS_DEATH: (0, 0, 0)
+        }
+        all_boss_states = list(colors.keys())
+        for state in all_boss_states:
+            info = boss_sprites_def.get(state)
+            placeholder_size = (120, 180)
+            loaded_ok = False
+            if info:
+                 placeholder_size = (info.get("width", 120), info.get("height", 180))
+                 if info.get("file") != "placeholder" and info.get("frames", 0) > 0:
+                     try:
+                         # (Código de carregamento de spritesheet omitido para brevidade, igual ao anterior)
+                         if isinstance(info["file"], str): sprite_sheet = pygame.image.load(info["file"]).convert_alpha()
+                         else: sprite_sheet = info["file"]
+                         frames_list = []
+                         target_w, target_h = 120, 180
+                         for i in range(info["frames"]):
+                             frame=sprite_sheet.subsurface(pygame.Rect(i*info["width"],0,info["width"],info["height"]))
+                             frame = pygame.transform.scale(frame, (target_w, target_h)); frames_list.append(frame)
+                         self.frames[state] = frames_list; loaded_ok = True
+                     except Exception as e: print(f"[BOSS Load] Falha '{state}': {e}")
+            if not loaded_ok: self.frames[state] = [self._create_placeholder(colors.get(state,(255,255,255)), placeholder_size)]
+
+    # --- change_state (sem mudanças) ---
+    def change_state(self, new_state):
+        if (self.state != new_state or not self.frames_atual) and not self.is_dead:
+            if new_state in self.frames and self.frames[new_state]:
+                self.state = new_state; self.frames_atual = self.frames[new_state]
+                self.frame_index = 0; self.animation_timer = 0
+                base_image = self.frames_atual[0]
+                self.image = pygame.transform.flip(base_image, True, False) if not self.facing_right else base_image
+            else:
+                print(f"[BOSS Change] ERRO: '{new_state}' sem frames!")
+                if self.state != BOSS_IDLE and BOSS_IDLE in self.frames and self.frames[BOSS_IDLE]: self.change_state(BOSS_IDLE)
+
+    # --- update_animation (sem mudanças) ---
+    def update_animation(self):
+        if not self.frames_atual: return
+        if self.is_dead and self.state == BOSS_DEATH:
+             if self.frame_index >= len(self.frames_atual) - 1:
+                 self.image = self.frames_atual[-1]
+                 if not self.facing_right: self.image = pygame.transform.flip(self.image, True, False)
+                 return
+        self.animation_timer += 1
+        if self.animation_timer >= self.animation_speed:
+            self.animation_timer = 0
+            self.frame_index = (self.frame_index + 1) % len(self.frames_atual)
+            base_image = self.frames_atual[self.frame_index]
+            self.image = pygame.transform.flip(base_image, True, False) if not self.facing_right else base_image
+
+    # --- Movimento Removido ---
+    def update_movement_and_physics(self): pass
+    def check_vertical_collision(self): pass
+    def check_horizontal_collision(self): pass
+
+    # --- update_ai (sem mudanças na lógica) ---
+    def update_ai(self, current_time):
+        if self.is_dead: return
+        if self.state == BOSS_HIT: # Recuperação
+            if current_time - self.last_hit_time >= self.hit_recovery_time:
+                self.change_state(BOSS_IDLE)
+                if self.ai_state not in ['IDLE', 'COOLDOWN']: self.ai_state = 'IDLE'; self.is_melee_active = False
+            else: return
+        # Máquina de Estados
+        if self.ai_state == 'IDLE':
+            if current_time - self.last_attack_time >= self.attack_cooldown:
+                self.choose_attack()
+                if self.chosen_attack: self.ai_state = 'CHARGING'; self.action_start_time = current_time; self.start_charging_animation()
+        elif self.ai_state == 'CHARGING':
+            if current_time - self.action_start_time >= self.charge_duration:
+                self.ai_state = 'ATTACKING'; self.action_start_time = current_time; self.execute_attack(current_time)
+        elif self.ai_state == 'ATTACKING':
+            attack_timer_ended = False; duration_to_check = 0
+            if self.chosen_attack == 'FALLING': duration_to_check = self.falling_attack_duration
+            elif self.chosen_attack == 'PROJECTILE': duration_to_check = self.projectile_attack_animation_duration; self.handle_projectile_attack(current_time)
+            elif self.chosen_attack == 'MELEE': duration_to_check = self.melee_attack_duration
+            if current_time - self.action_start_time >= duration_to_check:
+                 attack_timer_ended = True
+                 if self.chosen_attack == 'MELEE': self.is_melee_active = False
+            if attack_timer_ended: self.ai_state = 'COOLDOWN'; self.last_attack_time = current_time; self.chosen_attack = None; self.change_state(BOSS_IDLE)
+        elif self.ai_state == 'COOLDOWN':
+            if current_time - self.last_attack_time >= self.attack_cooldown:
+                  self.ai_state = 'IDLE'
+                  if self.state != BOSS_IDLE: self.change_state(BOSS_IDLE)
+
+    # --- choose_attack (sem mudanças) ---
+    def choose_attack(self):
+        distance_to_player = math.hypot(self.rect.centerx - self.jogador.rect.centerx, self.rect.centery - self.jogador.rect.centery)
+        if distance_to_player <= self.melee_range: self.chosen_attack = 'MELEE'; print("[BOSS Choose] MELEE")
+        else:
+            if self.use_falling_next: self.chosen_attack = 'FALLING'; print("[BOSS Choose] FALLING")
+            else: self.chosen_attack = 'PROJECTILE'; print("[BOSS Choose] PROJECTILE")
+            self.use_falling_next = not self.use_falling_next
+        if self.chosen_attack == 'PROJECTILE': self.projectiles_fired = 0
+
+    # --- start_charging_animation (sem mudanças) ---
+    def start_charging_animation(self):
+        if self.chosen_attack == 'FALLING':   self.change_state(BOSS_CHARGE_FALLING)
+        elif self.chosen_attack == 'PROJECTILE': self.change_state(BOSS_CHARGE_PROJECTILE)
+        elif self.chosen_attack == 'MELEE':      self.change_state(BOSS_CHARGE_MELEE)
+
+    # --- execute_attack (sem mudanças) ---
+    def execute_attack(self, current_time):
+        print(f"[DEBUG Execute] Executando: {self.chosen_attack}")
+        if self.chosen_attack == 'FALLING':
+            self.change_state(BOSS_ATTACK_FALLING)
+            self.spawn_falling_objects()
+        elif self.chosen_attack == 'PROJECTILE':
+            self.change_state(BOSS_ATTACK_PROJECTILE)
+            self.handle_projectile_attack(current_time)
+        elif self.chosen_attack == 'MELEE':
+            self.change_state(BOSS_ATTACK_MELEE)
+            self.is_melee_active = True
+
+    # --- spawn_falling_objects (REVISADO) ---
+    def spawn_falling_objects(self):
+        """Cria entre 6 a 8 projéteis amarelos que caem do céu."""
+        print(">>>>>>>> [BOSS SPAWN] DENTRO DE spawn_falling_objects (usando FallingProjectile) <<<<<<<<") # DEBUG
+        num_objects = random.randint(self.falling_object_min_count, self.falling_object_max_count)
+        print(f"    [BOSS SPAWN] Tentando criar {num_objects} FallingProjectiles...") # DEBUG
+        created_count = 0
+        LARGURA_APROX = 1280 # Aproximação da largura da tela para dispersão
+
+        for i in range(num_objects):
+            player_x = self.jogador.rect.centerx
+            # Área de spawn horizontal perto do jogador, limitada pelo mapa
+            min_x_dispersao = player_x - LARGURA_APROX * 0.6
+            max_x_dispersao = player_x + LARGURA_APROX * 0.6
+            min_x = max(10, min_x_dispersao)
+            max_x = min(self.largura_mapa - 10, max_x_dispersao)
+
+            if min_x >= max_x:
+                print(f"    [BOSS SPAWN] Objeto {i}: Área inválida (min_x={min_x}, max_x={max_x}), pulando.")
+                continue
+
+            spawn_x = random.uniform(min_x, max_x)
+            spawn_y = 50 # Y inicial ACIMA da tela (ajustado para 'top' em FallingProjectile)
+
+            print(f"    [BOSS SPAWN] Criando FallingProjectile {i} em ({spawn_x:.1f}, y_start={spawn_y})") # DEBUG
+
+            # <<< ALTERAÇÃO PRINCIPAL AQUI >>>
+            # Instancia a nova classe FallingProjectile
+            obj = FallingProjectile(spawn_x, spawn_y, self.falling_object_speed,
+                                    self.colisao_rects, self.altura_mapa, dano=1) # Dano padrão 1
+            # <<< FIM DA ALTERAÇÃO >>>
+
+            self.falling_objects_group.add(obj) # Adiciona ao grupo LOCAL do boss (o nome do grupo pode ser mantido)
+            created_count += 1
+        print(f"    [BOSS SPAWN] Criados: {created_count}. Tamanho GRUPO LOCAL (falling_objects_group): {len(self.falling_objects_group)}") # DEBUG
+
+
+    # --- handle_projectile_attack (sem mudanças) ---
+    def handle_projectile_attack(self, current_time):
+        if self.projectiles_fired < self.projectile_count and \
+           current_time - self.action_start_time >= self.projectiles_fired * self.projectile_interval:
+            spawn_x, spawn_y = self.rect.center
+            target_x, target_y = self.jogador.rect.center
+            proj = BossProjectile(spawn_x, spawn_y, target_x, target_y, self.projectile_speed, self.colisao_rects)
+            self.projectiles_group.add(proj)
+            self.projectiles_fired += 1
+            print(f"[BOSS] Disparou projétil {self.projectiles_fired}") # DEBUG
+
+    # --- handle_melee_attack (sem mudanças) ---
+    def handle_melee_attack(self, current_time): pass
+
+    # --- get_melee_hitbox (sem mudanças) ---
+    def get_melee_hitbox(self):
+        if not self.is_melee_active: return None
+        hitbox_x = self.rect.left - self.melee_hitbox_width - self.melee_hitbox_offset_x
+        hitbox_y = self.rect.centery - self.melee_hitbox_height / 2
+        return pygame.Rect(hitbox_x, hitbox_y, self.melee_hitbox_width, self.melee_hitbox_height)
+
+    # --- receber_dano (sem mudanças) ---
+    def receber_dano(self, dano, atacando=False):
+        current_time = pygame.time.get_ticks()
+        if self.is_dead or current_time < self.invulnerable_timer: return
+        self.vida -= dano; self.last_hit_time = current_time
+        self.invulnerable_timer = current_time + self.invulnerable_duration
+        print(f"[BOSS] DANO: {dano}, Vida: {self.vida}/{self.vida_maxima}")
+        if self.vida <= 0: self.vida = 0; self.morrer()
+        else:
+            if self.ai_state == 'ATTACKING' and self.chosen_attack == 'MELEE': self.is_melee_active = False
+            self.change_state(BOSS_HIT)
+
+    # --- morrer (sem mudanças) ---
+    def morrer(self):
+        if not self.is_dead:
+            print("[BOSS] MORREU!"); self.is_dead = True
+            self.change_state(BOSS_DEATH); self.is_melee_active = False
+
+    # --- update (sem mudanças) ---
+    def update(self):
+        current_time = pygame.time.get_ticks()
+        if self.is_dead: self.update_animation(); return
+        self.update_ai(current_time)
+        self.update_animation()
+
+    # --- draw (sem mudanças) ---
+    def draw(self, surface): pass
