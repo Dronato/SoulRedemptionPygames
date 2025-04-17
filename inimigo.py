@@ -81,7 +81,7 @@ SPRITES = {
         INIMIGO2MP2:{
             INIMIGO2MP2IDLE:{"file": "img/mapa2/inimigo2/inimigo2mp2_andando.png", "frames": 6, "width": 129, "height": 91}, 
             INIMIGO2MP2ATTACK:{"file": "img/mapa2/inimigo2/inimigo2mp2_ataque.png", "frames": 15, "width": 193, "height": 161},
-            INIMIGO2MP2DANO:{"file": "img/mapa2/inimigo2/inimigo2mp2_dano.png", "frames": 5, "width": 482, "height": 183},
+            INIMIGO2MP2DANO:{"file": "img/mapa2/inimigo2/inimigo2mp2_dano.png", "frames": 5, "width": 482, "height": 99},
             INIMIGO2MP2MORTO:{"file": "img/mapa2/inimigo2/inimigo2mp2_morto.png", "frames": 11, "width": 482, "height": 183},
             INIMIGO2MP2PROJETIL:{"file": "img/mapa2/inimigo2/inimigo2mp2_projetil.png", "frames": 1, "width": 134, "height": 136},
         },
@@ -1519,8 +1519,6 @@ class Inimigo2mp2(pygame.sprite.Sprite):
             # Aumenta o tamanho da animação de morte
             if self.state == INIMIGO1MP1IDLE:
                 frame = pygame.transform.scale(frame, (28, 28))  # ← maior
-            elif self.state == INIMIGO2MP2DANO:
-                frame = pygame.transform.scale(frame, (80, 80))
             else:
                 frame = pygame.transform.scale(frame, (40, 40))
 
@@ -1533,7 +1531,7 @@ class Inimigo2mp2(pygame.sprite.Sprite):
 
         # Se for animação de morte, deixa mais lenta
         if self.state == INIMIGO2MP2MORTO:
-            velocidade_anim = 8
+            velocidade_anim = 7
         elif self.state == INIMIGO2MP2IDLE:
             velocidade_anim = 4
         else:
@@ -1708,7 +1706,13 @@ class Inimigo2mp2(pygame.sprite.Sprite):
 
         pos_x = self.rect.x * zoom + deslocamento_x
         # Ajuste vertical para ataque
-        offset_y = -8 if self.state == INIMIGO2MP2ATTACK else 0
+        if self.state == INIMIGO2MP2ATTACK:
+            offset_y = -8
+        elif self.state == INIMIGO2MP2DANO:
+            offset_y = -12
+        else:
+            offset_y = 0
+
         pos_y = (self.rect.y + offset_y) * zoom + deslocamento_y
         surface.blit(scaled_image, (pos_x, pos_y))
 
