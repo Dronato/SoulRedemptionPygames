@@ -58,9 +58,32 @@ BOSS_CHARGE_MELEE = "boss_charge_melee"
 BOSS_ATTACK_MELEE = "boss_attack_melee"
 BOSS_HIT = "boss_hit"
 BOSS_DEATH = "boss_death"
+BOSS_CHARGE_DASH = "boss_charge_dash"  # Estado para carregar o dash
+BOSS_ATTACK_DASH = "boss_attack_dash"
 
 # Configuração dos sprites e frames
 SPRITES = {
+
+    "BOSS_FINAL": {
+        # ... (entradas existentes para IDLE, FALLING, PROJECTILE, MELEE, HIT, DEATH) ...
+        BOSS_IDLE: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        BOSS_WALK: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        BOSS_CHARGE_FALLING: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        BOSS_ATTACK_FALLING: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        BOSS_CHARGE_PROJECTILE: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        BOSS_ATTACK_PROJECTILE: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        BOSS_CHARGE_MELEE: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        BOSS_ATTACK_MELEE: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        BOSS_HIT: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        BOSS_DEATH: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+
+        # <<< ADICIONADO >>>
+        # Use seus arquivos ou mantenha placeholder.
+        # CHARGE pode ser um brilho ou pose diferente.
+        BOSS_CHARGE_DASH: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        # ATTACK pode ser a animação de IDLE/WALK ou uma específica de "voo".
+        BOSS_ATTACK_DASH: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+    },
     MAPA1:{
         INIMIGO1MP1:{
             INIMIGO1MP1IDLE:{"file": "img/mapa1/inimigo1/inimigo1_andando.png", "frames": 3, "width": 445, "height": 394},
@@ -1157,7 +1180,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.largura_mapa = largura_mapa
         self.altura_mapa = altura_mapa # Essencial para FallingObject
 
-        self.vida_maxima = 150; self.vida = self.vida_maxima
+        self.vida_maxima = 16; self.vida = self.vida_maxima
         self.facing_right = False; self.no_chao = True; self.is_dead = False
         self.invulnerable_timer = 0; self.invulnerable_duration = 300
 
@@ -1165,6 +1188,9 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.frame_index = 0; self.animation_timer = 0; self.animation_speed = 10
         self.image = pygame.Surface((120, 180)); self.image.fill((50, 50, 50))
         self.rect = self.image.get_rect(midbottom=(x, y))
+        self.original_x = self.rect.centerx # Guarda o CENTRO X inicial
+        self.original_y = self.rect.centery # Guarda o CENTRO Y inicial
+
         self.load_all_sprites() # Garante placeholders se sprites reais falharem
         self.change_state(BOSS_IDLE)
 
@@ -1190,6 +1216,17 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.melee_hitbox_height = 100; self.melee_hitbox_offset_x = 40
         self.melee_dano = 2; self.is_melee_active = False; self.melee_attack_duration = 600
 
+                # <<< ADICIONADO: Atributos para Fase 2 e Dash >>>
+        self.is_phase_2 = False
+        self.phase_2_threshold = 0.20 # Ativa com 20% de vida ou menos
+        self.is_dashing = False        # Flag: está no meio do dash?
+        self.dash_speed = 18           # Pixels por frame (ajuste a gosto)
+        self.dash_y = self.original_y  # O Y será fixo durante o dash
+        self.dash_direction = 0        # -1 (esquerda), 1 (retorno da direita)
+        self.dash_dano = 1             # Dano de contato do dash
+        self.can_dash_damage = False 
+        self.dash_phase = 0
+
     # --- _create_placeholder (sem mudanças) ---
     def _create_placeholder(self, color, size=(120, 180)):
         surf = pygame.Surface(size, pygame.SRCALPHA)
@@ -1205,7 +1242,8 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
             BOSS_CHARGE_FALLING: (200, 200, 0), BOSS_ATTACK_FALLING: (255, 255, 0),
             BOSS_CHARGE_PROJECTILE: (0, 0, 200), BOSS_ATTACK_PROJECTILE: (0, 0, 255),
             BOSS_CHARGE_MELEE: (200, 0, 0), BOSS_ATTACK_MELEE: (255, 0, 0),
-            BOSS_HIT: (255, 128, 0), BOSS_DEATH: (0, 0, 0)
+            BOSS_HIT: (255, 128, 0), BOSS_DEATH: (0, 0, 0),BOSS_CHARGE_DASH:(22,22,22),
+            BOSS_ATTACK_DASH:(44,44,44),
         }
         all_boss_states = list(colors.keys())
         for state in all_boss_states:
@@ -1259,66 +1297,208 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
     def update_movement_and_physics(self): pass
     def check_vertical_collision(self): pass
     def check_horizontal_collision(self): pass
+    
+    
+    def update(self):
+        current_time = pygame.time.get_ticks()
 
-    # --- update_ai (sem mudanças na lógica) ---
+        if self.is_dead:
+            self.update_animation()
+            return
+
+        if self.is_dashing: # Controla todo o processo do dash
+            self.rect.centery = self.dash_y # Mantém Y constante
+            self.rect.x += self.dash_speed * self.dash_direction # Move para esquerda
+
+            # --- Lógica baseada na Fase do Dash ---
+            if self.dash_phase == 1: # Fase 1: Indo para esquerda para sair
+                if self.rect.right < 0: # Saiu pela borda esquerda?
+                    print("    [DASH Update] Fase 1: Saiu pela esquerda. Teleportando & mudando para Fase 2...")
+                    self.rect.left = self.largura_mapa # Teleporta para a borda direita
+                    self.dash_phase = 2 # <<< MUDA PARA FASE 2 >>>
+                    self.can_dash_damage = True # Permite dano na volta
+                    print(f"    [DASH Update] Teleportado para x={self.rect.left}. Fase atual: {self.dash_phase}")
+
+            elif self.dash_phase == 2: # Fase 2: Voltando da direita para o centro
+                if self.rect.centerx <= self.original_x: # Chegou ou passou do centro original?
+                    print("    [DASH Update] Fase 2: Retornou à posição original. Finalizando dash.")
+                    # Reseta tudo
+                    self.is_dashing = False
+                    self.dash_phase = 0 # Reseta fase
+                    self.rect.centerx = self.original_x # Garante posição X
+                    self.rect.centery = self.original_y # Garante posição Y
+                    self.dash_direction = 0
+                    self.can_dash_damage = False
+                    # Finaliza IA
+                    self.ai_state = 'COOLDOWN'
+                    self.last_attack_time = current_time
+                    self.chosen_attack = None
+                    self.change_state(BOSS_IDLE)
+
+            self.update_animation() # Atualiza animação do dash
+            return # Pula IA normal
+
+        # --- Lógica Fora do Dash ---
+        self.update_ai(current_time) # IA só roda se não estiver dashando
+        self.update_animation()      # Animação normal
+
+
+    # Dentro de BossFinal:
     def update_ai(self, current_time):
+        # Guarda inicial: Não faz nada se morto, em hit ou dashando
         if self.is_dead: return
-        if self.state == BOSS_HIT: # Recuperação
+        if self.state == BOSS_HIT:
+            # Lógica de recuperação do hit (sem mudança)
             if current_time - self.last_hit_time >= self.hit_recovery_time:
                 self.change_state(BOSS_IDLE)
-                if self.ai_state not in ['IDLE', 'COOLDOWN']: self.ai_state = 'IDLE'; self.is_melee_active = False
-            else: return
-        # Máquina de Estados
+                self.ai_state = 'IDLE'
+                self.is_melee_active = False
+            else:
+                return # Continua em recuperação
+        # <<< ADICIONADO: Guarda para DASHING >>>
+        if self.ai_state == 'DASHING':
+            # A lógica do dash é tratada no método update principal.
+            # A IA não deve interferir aqui.
+            # print("[AI Update] Em estado DASHING, AI pausada.") # DEBUG
+            return
+
+        # Máquina de Estados Normal (IDLE, CHARGING, ATTACKING, COOLDOWN)
         if self.ai_state == 'IDLE':
             if current_time - self.last_attack_time >= self.attack_cooldown:
                 self.choose_attack()
-                if self.chosen_attack: self.ai_state = 'CHARGING'; self.action_start_time = current_time; self.start_charging_animation()
+                if self.chosen_attack:
+                    self.ai_state = 'CHARGING'
+                    self.action_start_time = current_time
+                    self.start_charging_animation()
         elif self.ai_state == 'CHARGING':
             if current_time - self.action_start_time >= self.charge_duration:
-                self.ai_state = 'ATTACKING'; self.action_start_time = current_time; self.execute_attack(current_time)
+                self.ai_state = 'ATTACKING'
+                self.action_start_time = current_time
+                self.execute_attack(current_time)
         elif self.ai_state == 'ATTACKING':
-            attack_timer_ended = False; duration_to_check = 0
-            if self.chosen_attack == 'FALLING': duration_to_check = self.falling_attack_duration
-            elif self.chosen_attack == 'PROJECTILE': duration_to_check = self.projectile_attack_animation_duration; self.handle_projectile_attack(current_time)
-            elif self.chosen_attack == 'MELEE': duration_to_check = self.melee_attack_duration
-            if current_time - self.action_start_time >= duration_to_check:
+            # Verifica fim da ANIMAÇÃO/AÇÃO para ataques baseados em TEMPO
+            # IMPORTANTE: O DASH NÃO É FINALIZADO AQUI
+            if self.chosen_attack == 'DASH': # << Se o ataque for DASH, sai daqui
+                 return                   #    pois update() controla o fim.
+
+            attack_timer_ended = False
+            duration_to_check = 0
+            if self.chosen_attack == 'FALLING':
+                duration_to_check = self.falling_attack_duration
+            elif self.chosen_attack == 'PROJECTILE':
+                duration_to_check = self.projectile_attack_animation_duration
+                self.handle_projectile_attack(current_time) # Continua disparando
+            elif self.chosen_attack == 'MELEE':
+                duration_to_check = self.melee_attack_duration
+
+            # Verifica se o timer acabou (para ataques NÃO-DASH)
+            if duration_to_check > 0 and current_time - self.action_start_time >= duration_to_check:
                  attack_timer_ended = True
-                 if self.chosen_attack == 'MELEE': self.is_melee_active = False
-            if attack_timer_ended: self.ai_state = 'COOLDOWN'; self.last_attack_time = current_time; self.chosen_attack = None; self.change_state(BOSS_IDLE)
+                 if self.chosen_attack == 'MELEE':
+                     self.is_melee_active = False
+
+            # Transição para COOLDOWN se o ataque (NÃO-DASH) terminou
+            if attack_timer_ended:
+                 print(f"[AI Update] Ataque '{self.chosen_attack}' terminou por tempo. Indo para COOLDOWN.")
+                 self.ai_state = 'COOLDOWN'
+                 self.last_attack_time = current_time
+                 self.chosen_attack = None
+                 if self.state != BOSS_HIT: # Não muda se estiver tomando dano
+                     self.change_state(BOSS_IDLE)
+
         elif self.ai_state == 'COOLDOWN':
             if current_time - self.last_attack_time >= self.attack_cooldown:
                   self.ai_state = 'IDLE'
-                  if self.state != BOSS_IDLE: self.change_state(BOSS_IDLE)
-
+                  if self.state != BOSS_HIT:
+                      self.change_state(BOSS_IDLE)
+# --- END OF FILE inimigo.py ---
     # --- choose_attack (sem mudanças) ---
     def choose_attack(self):
         distance_to_player = math.hypot(self.rect.centerx - self.jogador.rect.centerx, self.rect.centery - self.jogador.rect.centery)
-        if distance_to_player <= self.melee_range: self.chosen_attack = 'MELEE'; print("[BOSS Choose] MELEE")
+
+        possible_attacks = []
+
+        # Melee só é possível se perto
+        if distance_to_player <= self.melee_range:
+            possible_attacks.append('MELEE')
+
+        # Ataques padrão sempre possíveis (se não melee)
+        possible_attacks.append('FALLING')
+        possible_attacks.append('PROJECTILE')
+
+        # <<< ADICIONADO: Dash apenas na Fase 2 >>>
+        if self.is_phase_2:
+            possible_attacks.append('DASH')
+            print("[BOSS Choose] Fase 2 ativa, DASH é uma opção.")
+
+        # Lógica de Escolha (exemplo: prioriza melee se perto, senão aleatório)
+        if 'MELEE' in possible_attacks: # Se melee é opção (está perto)
+             # Exemplo: 50% de chance de usar melee, 50% de escolher outro
+             if random.random() < 0.5:
+                 self.chosen_attack = 'MELEE'
+             else:
+                 # Remove melee para escolher entre os outros
+                 possible_attacks.remove('MELEE')
+                 if possible_attacks: # Garante que ainda há opções
+                     self.chosen_attack = random.choice(possible_attacks)
+                 else:
+                     self.chosen_attack = 'MELEE' # Fallback se só havia melee
+        elif possible_attacks: # Se não está perto para melee, escolhe dos restantes
+            # Remove 'MELEE' caso tenha sido adicionado por engano (não deveria)
+            if 'MELEE' in possible_attacks: possible_attacks.remove('MELEE')
+            if possible_attacks:
+                 self.chosen_attack = random.choice(possible_attacks)
+            else:
+                 self.chosen_attack = None # Segurança
+                 print("[BOSS Choose] AVISO: Nenhuma opção de ataque encontrada!")
         else:
-            if self.use_falling_next: self.chosen_attack = 'FALLING'; print("[BOSS Choose] FALLING")
-            else: self.chosen_attack = 'PROJECTILE'; print("[BOSS Choose] PROJECTILE")
-            self.use_falling_next = not self.use_falling_next
-        if self.chosen_attack == 'PROJECTILE': self.projectiles_fired = 0
+             self.chosen_attack = None # Segurança
+             print("[BOSS Choose] AVISO: Nenhuma opção de ataque encontrada!")
+
+
+        print(f"[BOSS Choose] Ataque Escolhido: {self.chosen_attack}")
+
+        # Resets específicos
+        if self.chosen_attack == 'PROJECTILE':
+            self.projectiles_fired = 0
 
     # --- start_charging_animation (sem mudanças) ---
     def start_charging_animation(self):
-        if self.chosen_attack == 'FALLING':   self.change_state(BOSS_CHARGE_FALLING)
-        elif self.chosen_attack == 'PROJECTILE': self.change_state(BOSS_CHARGE_PROJECTILE)
-        elif self.chosen_attack == 'MELEE':      self.change_state(BOSS_CHARGE_MELEE)
+        print(f"[BOSS Charge] Iniciando carga para: {self.chosen_attack}")
+        if self.chosen_attack == 'FALLING':
+            self.change_state(BOSS_CHARGE_FALLING)
+        elif self.chosen_attack == 'PROJECTILE':
+            self.change_state(BOSS_CHARGE_PROJECTILE)
+        elif self.chosen_attack == 'MELEE':
+            self.change_state(BOSS_CHARGE_MELEE)
+        # <<< ADICIONADO >>>
+        elif self.chosen_attack == 'DASH':
+            self.change_state(BOSS_CHARGE_DASH)
 
     # --- execute_attack (sem mudanças) ---
     def execute_attack(self, current_time):
-        print(f"[DEBUG Execute] Executando: {self.chosen_attack}")
+        print(f"[DEBUG Execute] Executando ataque: {self.chosen_attack}")
         if self.chosen_attack == 'FALLING':
             self.change_state(BOSS_ATTACK_FALLING)
             self.spawn_falling_objects()
         elif self.chosen_attack == 'PROJECTILE':
             self.change_state(BOSS_ATTACK_PROJECTILE)
-            self.handle_projectile_attack(current_time)
+            self.handle_projectile_attack(current_time) # Dispara o primeiro projétil
         elif self.chosen_attack == 'MELEE':
             self.change_state(BOSS_ATTACK_MELEE)
             self.is_melee_active = True
-
+        # <<< ADICIONADO >>>
+        elif self.chosen_attack == 'DASH':
+            print("    [Execute DASH] Configurando variáveis do dash...")
+            self.change_state(BOSS_ATTACK_DASH)
+            self.is_dashing = True
+            self.dash_y = self.rect.centery
+            self.dash_direction = -1 # Sempre move para esquerda
+            # <<< MODIFICADO: Iniciar Fase 1 >>>
+            self.dash_phase = 1
+            self.can_dash_damage = True
+            self.ai_state = 'DASHING'
+            print(f"    Dash iniciado: Fase {self.dash_phase}, Direção {self.dash_direction}, Y: {self.dash_y}, Retorno X: {self.original_x}")
     # --- spawn_falling_objects (REVISADO) ---
     def spawn_falling_objects(self):
         """Cria entre 6 a 8 projéteis amarelos que caem do céu."""
@@ -1380,14 +1560,34 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
     # --- receber_dano (sem mudanças) ---
     def receber_dano(self, dano, atacando=False):
         current_time = pygame.time.get_ticks()
-        if self.is_dead or current_time < self.invulnerable_timer: return
-        self.vida -= dano; self.last_hit_time = current_time
+        if self.is_dead or current_time < self.invulnerable_timer:
+            return
+
+        self.vida -= dano
+        self.last_hit_time = current_time
         self.invulnerable_timer = current_time + self.invulnerable_duration
-        print(f"[BOSS] DANO: {dano}, Vida: {self.vida}/{self.vida_maxima}")
-        if self.vida <= 0: self.vida = 0; self.morrer()
+        print(f"[BOSS] DANO RECEBIDO: {dano}, Vida: {self.vida}/{self.vida_maxima}")
+
+        if self.vida <= 0:
+            self.vida = 0
+            self.morrer()
         else:
-            if self.ai_state == 'ATTACKING' and self.chosen_attack == 'MELEE': self.is_melee_active = False
-            self.change_state(BOSS_HIT)
+            # Interrompe ação atual se for atingido (exceto durante o dash)
+            if not self.is_dashing:
+                self.change_state(BOSS_HIT)
+                if self.ai_state in ['CHARGING', 'ATTACKING']:
+                    print("[BOSS] Hit interrompeu CHARGING/ATTACKING.")
+                    self.ai_state = 'IDLE' # Volta para IDLE para reavaliar após hit
+                    self.is_melee_active = False
+                    self.projectiles_fired = 0
+
+            # <<< ADICIONADO: Verificação da Fase 2 >>>
+            if not self.is_phase_2 and (self.vida / self.vida_maxima) <= self.phase_2_threshold:
+                self.is_phase_2 = True
+                print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                print("!!!!!!!!!! BOSS FASE 2 ATIVADA !!!!!!!!!!")
+                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+
 
     # --- morrer (sem mudanças) ---
     def morrer(self):
@@ -1396,15 +1596,11 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
             self.change_state(BOSS_DEATH); self.is_melee_active = False
 
     # --- update (sem mudanças) ---
-    def update(self):
-        current_time = pygame.time.get_ticks()
-        if self.is_dead: self.update_animation(); return
-        self.update_ai(current_time)
-        self.update_animation()
+# --- Dentro da classe BossFinal em inimigo.py ---
+
 
     # --- draw (sem mudanças) ---
     def draw(self, surface): pass
-
 
 
 # ---------------------------------------------------------------------------------Inimigo_Geleia/Slime - (Rai - Pode reclamar)

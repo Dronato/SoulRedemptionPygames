@@ -797,6 +797,17 @@ class Game:
                          if self.jogador: self.jogador.receber_dano(obj.dano)
                          # Efeito sonoro/visual de hit
 
+                    if self.boss_instance and self.boss_instance.is_dashing and self.boss_instance.can_dash_damage:
+                             # Colisão direta com o rect do boss durante o dash
+                             # Usar collide_mask se ambos tiverem mask, senão collide_rect
+                        if pygame.sprite.collide_rect(self.jogador, self.boss_instance): # Ou collide_mask
+                             print(f"    [COLLISION] Jogador atingido pelo DASH! Vida antes: {self.jogador.vida_atual}") # DEBUG
+                             self.jogador.receber_dano(self.boss_instance.dash_dano)
+                                 # Impede dano múltiplo na MESMA passagem do dash
+                             self.boss_instance.can_dash_damage = False
+                             print(f"    [COLLISION] Vida depois: {self.jogador.vida_atual}. can_dash_damage = False") # DEBUG
+                                 # Adicionar efeito sonoro/visual de impacto e talvez empurrar o jogador
+
                     #   d) Jogador vs Melee do Boss
                     if self.boss_instance and self.boss_instance.is_melee_active and self.jogador:
                          melee_hitbox = self.boss_instance.get_melee_hitbox()
