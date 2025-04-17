@@ -869,6 +869,7 @@ class Game:
                                         if self.tela.get_rect().colliderect(sprite_rect_tela):
                                                 self.tela.blit(img_scaled, sprite_rect_tela.topleft)
                                 except: pass # Ignora erros de desenho
+                                
                             if isinstance(sprite, BossFinal):
                               if sprite.is_melee_active:
                                    melee_box_mundo = sprite.get_melee_hitbox()
@@ -880,6 +881,17 @@ class Game:
                                        box_h_tela = melee_box_mundo.height * self.zoom_level
                                        debug_rect_tela = pygame.Rect(box_x_tela, box_y_tela, box_w_tela, box_h_tela)
                                        pygame.draw.rect(self.tela, (255, 0, 0, 100), debug_rect_tela, 2) # Vermelho semi-transparente
+
+                    for inimigo_atual in self.inimigos:
+                        if isinstance(inimigo_atual, Inimigo1mp2) and callable(inimigo_atual.update):
+                            inimigo_atual.update(self.tela)
+                            inimigo_atual.draw(self.tela,
+                            zoom_level=self.zoom_level,
+                            deslocamento_camera_x=self.deslocamento_camera_x,
+                            deslocamento_camera_y=self.deslocamento_camera_y
+                        )
+                        else:
+                            inimigo_atual.update() # Chama update() de todos os inimigos no grupo
 
                     # 3. UI (HUD, Popups, Prompts)
                     self.desenhar_coracoes(); self.desenhar_pocoes(); self.desenhar_popup()
