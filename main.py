@@ -13,7 +13,7 @@ import player
 import inimigo
 # Ajuste os imports de inimigo conforme necessário
 from inimigo import Inimigo1mp1, Inimigo1mp2, BossFinal, BossProjectile, FallingObject
-from npc import NPC_Andy, NPC_Rafa
+from npc import NPC_Andy, NPC_Rafa, NPC_Gab
 # <<< ADICIONADO >>> Importar classe do Boss se existir (necessário para SalaBoss)
 # from inimigo import Boss # Descomente e ajuste quando tiver a classe Boss
 from map_loader import carregar_mapa, desenhar_mapa, criar_mapa_rects, criar_objetos_retangulos
@@ -379,7 +379,7 @@ class Game:
         self.inimigos.empty(); self.todos_sprites.empty()
         self.boss_projectiles.empty(); self.boss_falling_objects.empty()
         self.boss_instance = None
-        self.jogador = None; self.npc_A = None; self.npc_F = None; self.npc = None
+        self.jogador = None; self.npc_A = None; self.npc_F = None; self.npc_G = None ;self.npc = None
         self.colisao_rects = []; self.rampas_esquerda_rects = []; self.rampas_direita_rects = []
         self.buraco_rects = []; self.porta_rects = []; self.lava_rects = []
         self.tmx_data = None; self.largura_mapa = 0; self.altura_mapa_real = 0
@@ -501,6 +501,8 @@ class Game:
 
         elif map_path == "Mapa(2).tmx":
             try:
+                self.npc_G = NPC_Gab(x=463, y=990, zoom_level=self.zoom_level)
+                self.todos_sprites.add(self.npc_G)
                 inimigo3 = inimigo.Inimigo2mp2(x=678, y=1150, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
                 # inimigo4 = inimigo.Inimigo3mp2(x=678, y=1100, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
                 lista_inimigos_mapa.extend([inimigo3])
@@ -647,6 +649,13 @@ class Game:
                                 if pygame.math.Vector2(self.jogador.rect.center).distance_to(npc_atual.rect.center) < 100:
                                     self.mostrar_msg_npc = True; npc_proximo = npc_atual; break
                             self.npc = npc_proximo # Atualiza NPC em foco
+                    if self.mapa_atual_path == "Mapa(2).tmx":
+                        npcs_aqui = [n for n in [self.npc_G] if n]
+                        if npcs_aqui:
+                            for npc_atual in npcs_aqui:
+                                if pygame.math.Vector2(self.jogador.rect.center).distance_to(npc_atual.rect.center) < 50:
+                                    self.mostrar_msg_npc = True; npc_proximo = npc_atual; break
+                            self.npc = npc_proximo # Atualiza NPC em foco
 
                 # --- Processar Eventos ---
                 for evento in eventos_frame:
@@ -728,6 +737,8 @@ class Game:
                     if self.mapa_atual_path == "Mapa.tmx":
                         if self.npc_A: self.npc_A.atualizar()
                         if self.npc_F: self.npc_F.atualizar()
+                    if self.mapa_atual_path == "Mapa(2).tmx":
+                        if self.npc_G: self.npc_G.atualizar()
                     # Atualizar Inimigos
                     self.inimigos.update() # Chama update() de todos os inimigos no grupo
 
