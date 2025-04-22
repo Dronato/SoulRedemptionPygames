@@ -4,6 +4,8 @@
 [![Linguagem](https://img.shields.io/badge/Linguagem-Python-blue)](https://www.python.org/)
 [![Biblioteca](https://img.shields.io/badge/Biblioteca-Pygame-brightgreen)](https://www.pygame.org/)
 
+<img src="telaInicial.png" alt="Exemplo imagem">
+
 ## 📜 Descrição
 
 "SoulRedemptionPygames" é um roguelike dinâmico e divertido onde você acorda em um local misterioso, sem memórias claras. A cada exploração, você desvenda fragmentos do seu passado, desbloqueia novas habilidades poderosas e enfrenta desafios cada vez mais complexos. Prepare-se para uma jornada imprevisível, onde cada partida é única!
