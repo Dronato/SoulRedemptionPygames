@@ -192,6 +192,20 @@ class Game:
 
         print("DEBUG: Game.__init__ concluído.")
 
+    def tocar_musica_fundo(self, map_path):
+        if map_path == "Mapa.tmx":
+            pygame.mixer.music.load("musica/musica_medo.mp3")
+        elif map_path == "Mapa(2).tmx":
+            pygame.mixer.music.load("musica/musica_raiva.mp3")
+        elif map_path == "SalaBoss.tmx":
+            pygame.mixer.music.load("musica/musica_culpa.mp3")
+        else:
+            print(f"[MÚSICA] Nenhuma música definida para o mapa: {map_path}")
+            return
+
+        pygame.mixer.music.set_volume(0.5)  # você pode ajustar o volume aqui
+        pygame.mixer.music.play(-1)  # -1 faz a música tocar em loop
+
     # --- Funções Auxiliares ---
 
     def get_font(self, font_name_or_path, size):
@@ -536,6 +550,7 @@ class Game:
         self.game_state = "PLAYING"
         print(f"DEBUG: >>> Carregamento de '{map_path}' CONCLUÍDO. Estado: PLAYING <<<")
 
+        self.tocar_musica_fundo(map_path)
 
     def exibir_conversa(self):
         """Desenha a UI de conversa."""
@@ -548,50 +563,107 @@ class Game:
         else: self.em_conversa = False # Sai se não houver NPC válido
 
 #    ====================================== Cutscenes 
-    def play_cutscene(video_path, screen, audio_path=None):
-        cap = cv2.VideoCapture(video_path)
-
-        if not cap.isOpened():
-            print(f"[ERRO] Não foi possível abrir o vídeo: {video_path}")
-            return
-
-        if audio_path:
-            try:
-                pygame.mixer.music.load(audio_path)
-                pygame.mixer.music.play()
-            except Exception as e:
-                print(f"[ERRO] Ao tocar áudio: {e}")
-
+    def play_cutscene(self, video_path, tela, audio_path=None):
         clock = pygame.time.Clock()
 
+        # Inicializa o mixer do Pygame, caso não tenha sido inicializado
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+
+        # Carrega o áudio, caso fornecido
+        if audio_path and os.path.exists(audio_path):
+            try:
+                pygame.mixer.music.load(audio_path)
+                pygame.mixer.music.set_volume(0.7)
+                pygame.mixer.music.play()
+            except Exception as e:
+                print(f"Erro ao carregar áudio: {e}")
+        else:
+            print("Aviso: Áudio da cutscene não encontrado.")
+
+        # Abre o vídeo com OpenCV
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            print(f"Erro ao abrir o vídeo: {video_path}")
+            return
+
+        # Obtém as dimensões do vídeo e configura a tela do Pygame
+        video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        video_fps = cap.get(cv2.CAP_PROP_FPS) or 30
+
+        tela = pygame.display.set_mode((video_width, video_height))
+        pygame.display.set_caption("Cutscene")
+
+        # Loop para exibir o vídeo frame a frame
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
+            # 🔄 Rotaciona o vídeo 270 graus no sentido horário
+            frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
                     cap.release()
                     pygame.quit()
                     exit()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN:
+                elif evento.type == pygame.KEYDOWN:
+                    if evento.key == pygame.K_ESCAPE or evento.key == pygame.K_RETURN:
                         cap.release()
                         pygame.mixer.music.stop()
-                        return
+                        return  # Sai da função, pulando a cutscene
 
+            # Converte o frame para o formato RGB
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame_surface = pygame.surfarray.make_surface(frame)
-            frame_surface = pygame.transform.scale(frame_surface, screen.get_size())
 
-            screen.blit(frame_surface, (0, 0))
+            # Converte o frame para uma superfície Pygame
+            frame_surface = pygame.surfarray.make_surface(frame)
+            frame_surface = pygame.transform.scale(frame_surface, (video_width, video_height))
+
+            # Exibe o frame na tela do Pygame
+            tela.blit(frame_surface, (0, 0))
             pygame.display.flip()
 
-            clock.tick(30)
+            clock.tick(video_fps)
 
         cap.release()
         pygame.mixer.music.stop()
 
+
+
+    def tocar_cutscene(self, caminho_cutscene="cutscenes/Cutscene 01.mp4", caminho_audio="cutscenes/Cutscene-01.mp3"):
+            import cv2
+            # Carrega e toca o áudio com pygame.mixer
+            pygame.mixer.music.load(caminho_audio)
+            pygame.mixer.music.play()
+
+            cap = cv2.VideoCapture(caminho_cutscene)
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                frame = cv2.resize(frame, (self.LARGURA, self.ALTURA))
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                surface = pygame.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
+                self.tela.blit(surface, (0, 0))
+                pygame.display.update()
+
+                for evento in pygame.event.get():
+                    if evento.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+                    elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_RETURN:
+                        pygame.mixer.music.stop()  # Para o som se pular
+                        cap.release()
+                        return
+
+                pygame.time.delay(30)  # Ajuste para o fps do vídeo (~30fps)
+
+            cap.release()
+            pygame.mixer.music.stop()  # Garante que o som pare ao fim da cutscene
     # ==================== LOOP PRINCIPAL ====================
     def run(self):
         """Loop principal do jogo."""
@@ -686,8 +758,12 @@ class Game:
                                  # <<< MODIFICADO: Lógica de transição >>>
                                  if self.mapa_atual_path == "Mapa.tmx":
                                      mapa_a_carregar = "Mapa(2).tmx"
+                                     pygame.mixer.music.stop()  # Para música do mapa
+                                     self.tocar_cutscene("cutscenes/Cutscene 01.mp4", "cutscenes/Cutscene-01.mp3")
                                  elif self.mapa_atual_path == "Mapa(2).tmx":
-                                     mapa_a_carregar = "SalaBoss.tmx" # <<< ADICIONADO >>>
+                                    pygame.mixer.music.stop()  # Para música do mapa
+                                    self.tocar_cutscene("cutscenes/Cutscene 01.mp4", "cutscenes/Cutscene-01.mp3")
+                                    mapa_a_carregar = "SalaBoss.tmx"
                                  elif self.mapa_atual_path == "SalaBoss.tmx":
                                      # Só sai da sala do boss se ele foi derrotado?
                                      if not self.boss_instance or self.boss_instance.is_dead:

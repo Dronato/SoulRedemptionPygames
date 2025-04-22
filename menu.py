@@ -1,6 +1,7 @@
 import cv2
 import pygame
 import os
+import webbrowser
 
 # --- Função para tocar a cutscene com texto "PULAR" ---
 def play_cutscene(video_path, tela, audio_path=None):
@@ -70,7 +71,7 @@ def play_cutscene(video_path, tela, audio_path=None):
 # --- Caminhos dos arquivos ---
 script_dir = os.path.dirname(os.path.abspath(__file__))
 fundo_menu_path = os.path.join(script_dir, 'fundo_menu.png')
-fundo_creditos_path = os.path.join(script_dir, 'tileset_1.png')
+fundo_creditos_path = os.path.join(script_dir, 'call.png')
 
 try:
     fundo_menu_surf = pygame.image.load(fundo_menu_path).convert()
@@ -242,25 +243,82 @@ class MainMenu(Menu):
 
 class CreditsMenu(Menu):
     def __init__(self, main_game_instance):
-        Menu.__init__(self, main_game_instance)
+        super().__init__(main_game_instance)
+
+        # Lista com nome, posição e link de cada personagem
+        self.characters = [
+            {"name": "CARLOS",  "rect": pygame.Rect(237,  30,  200, 130), "url": "https://github.com/cDorth"},
+            {"name": "RAFAELA",   "rect": pygame.Rect(720, 30,  200, 130), "url": "https://github.com/bruxa61"},
+            {"name": "RAÍ",      "rect": pygame.Rect(1203, 30,  200, 130), "url": "https://github.com/Rai123100"},
+            {"name": "BRUNA",    "rect": pygame.Rect(237,  317, 200, 130), "url": "https://github.com/brubsb"},
+            {"name": "DAVI",     "rect": pygame.Rect(720, 317, 200, 130), "url": "https://github.com/DaviTorralvo"},
+            {"name": "ARTHUR",   "rect": pygame.Rect(1203, 317, 200, 130), "url": "https://github.com/intentdoor"},
+            {"name": "PEDRO",    "rect": pygame.Rect(237,  605, 200, 130), "url": "https://github.com/pe-odake"},
+            {"name": "GUILHERME",  "rect": pygame.Rect(720, 605, 200, 130), "url": "https://github.com/gprsilva"},
+            {"name": "MATHEUS","rect": pygame.Rect(1203, 605, 200, 130), "url": "https://github.com/vicenteruedamatheus"},
+        ]
+
+        self.selected_index = 0
+        self.blink_visible = True
+        self.last_toggle_time = pygame.time.get_ticks()
+        self.toggle_interval = 500
+
+        self.back_button_rect = pygame.Rect(50, self.main_game.ALTURA - 110, 135, 60)
+        self.back_button_color = (50, 50, 50)
+        self.back_button_hover_color = (100, 100, 100)
+        self.back_button_text_color = (255, 255, 255)
 
     def display_menu(self):
         self.tela.blit(self.fundo_creditos_scaled, (0, 0))
-        self.draw_text('CREDITS', self.font_size_titulo, self.mid_w, self.mid_h - 150)
-        text_y_start = self.mid_h - 50
-        line_height = 50
-        credits_text_x = self.LARGURA / 2
-        self.draw_text('Game Design - Seu Nome/Equipe', self.font_size_opcao, credits_text_x, text_y_start + 0 * line_height)
-        self.draw_text('Programming - Seu Nome/Equipe', self.font_size_opcao, credits_text_x, text_y_start + 1 * line_height)
-        self.draw_text('Art - Seu Nome/Equipe', self.font_size_opcao, credits_text_x, text_y_start + 2 * line_height)
-        self.draw_text('Music - Seu Nome/Equipe', self.font_size_opcao, credits_text_x, text_y_start + 3 * line_height)
-        self.draw_text('Press ENTER or ESC to go back', self.font_size_opcao - 10, self.LARGURA / 2, self.ALTURA - 60)
+
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_toggle_time > self.toggle_interval:
+            self.blink_visible = not self.blink_visible
+            self.last_toggle_time = current_time
+
+        for i, char in enumerate(self.characters):
+            rect = char["rect"]
+            if i == self.selected_index and self.blink_visible:
+                # Desenha o asterisco à esquerda do personagem
+                self.draw_text("*", 40, rect.left - 25, rect.top + 40, (255, 255, 255))
+
+        mouse_pos = pygame.mouse.get_pos()
+        is_hovering = self.back_button_rect.collidepoint(mouse_pos)
+
+        button_color = self.back_button_hover_color if is_hovering else self.back_button_color
+        pygame.draw.rect(self.tela, button_color, self.back_button_rect, border_radius=10)
+
+        self.draw_text("voltar", 30, self.back_button_rect.x + 30, self.back_button_rect.y + 10, self.back_button_text_color)
 
     def handle_input(self, events):
         next_game_state = "CREDITS"
+
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if event.key in [pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_BACKSPACE]:
+                if event.key in [pygame.K_ESCAPE, pygame.K_BACKSPACE]:
                     pygame.mixer.music.unpause()
                     next_game_state = "MENU"
+
+                elif event.key == pygame.K_RETURN:
+                    selected_char = self.characters[self.selected_index]
+                    webbrowser.open(selected_char["url"])
+
+                elif event.key == pygame.K_DOWN:
+                    self.selected_index = (self.selected_index + 3) % len(self.characters)
+                elif event.key == pygame.K_UP:
+                    self.selected_index = (self.selected_index - 3) % len(self.characters)
+                elif event.key == pygame.K_LEFT:
+                    if self.selected_index % 3 != 0:
+                        self.selected_index -= 1
+                elif event.key == pygame.K_RIGHT:
+                    if (self.selected_index + 1) % 3 != 0:
+                        self.selected_index += 1
+
+            # ESTE BLOCO AQUI DEVE FICAR FORA DO if KEYDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mouse_pos = pygame.mouse.get_pos()
+                if self.back_button_rect.collidepoint(mouse_pos):
+                    pygame.mixer.music.unpause()
+                    next_game_state = "MENU"
+
         return next_game_state
