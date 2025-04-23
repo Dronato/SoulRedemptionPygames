@@ -1938,33 +1938,20 @@ class Inimigo2mp2(pygame.sprite.Sprite):
 
 
 
-
-
-
-# --------------------------------------------------------------------------------------------- DRAGÃO
-
+# ---------------------------------------------------------------------------------------------Inimigo_Dragão - (Rai - Pode reclamar)
 
 class Inimigo3mp2(pygame.sprite.Sprite):
-    def __init__(self, x, y,jogador, colisao_rects, tmx_data,largura_mapa, altura_mapa):
+    def __init__(self, x, y, jogador, colisao_rects, tmx_data, largura_mapa, altura_mapa):
         super().__init__()
         self.state = INIMIGO3MP2IDLE
-        self.frame_index = 0 
+        self.frame_index = 0
         self.animation_timer = 0
-        self.attack_animation_timer = 0  # Novo timer para animação de ataque
         self.facing_right = True
-        self.velocidade_x = 2
+        self.velocidade_x = 1
         self.velocidade_y = 0
         self.gravity = 0.5
-        self.jump_strength = -10
-        self.is_jumping = False
-        self.moving = False
-        self.atacando = False  # Novo estado para verificar ataque
+        self.atacando = False
         self.dano = 1
-
-        self.tempo_ataque_inicio = 0
-        self.cooldown_ataque = 700  # em milissegundos (ex: 1 segundo)
-        self.preparando_ataque = False
-
 
         self.jogador = jogador
         self.grupo_jogador = pygame.sprite.GroupSingle(self.jogador)
@@ -1973,197 +1960,185 @@ class Inimigo3mp2(pygame.sprite.Sprite):
         self.largura_mapa = largura_mapa
         self.altura_mapa = altura_mapa
 
+        self.vida = 5
 
-        self.vida = 10  # Vida do inimigo
+        self.sprites_por_estado = {}
+        self.sprites_flip_por_estado = {}
+        self.carregar_todos_sprites()
+        self.frames = self.sprites_por_estado[self.state]
+        self.frames_flip = self.sprites_flip_por_estado[self.state]
 
-        # Carregar sprites
-        self.frames = []
-        self.load_sprites()
-
-        # Definir limites da patrulha (sentinela)
-        self.x_inicial = x  # Ponto de partida do inimigo
-        self.x_final = x + 300  # Distância máxima para a direita
-        self.patrulhando = True  # Estado de patrulha
-
-        # Garantir que há pelo menos um frame válido
-        if not self.frames:
-            self.frames = [pygame.Surface((30, 30))]
-            self.frames[0].fill((255, 0, 0))
+        self.x_inicial = x
+        self.x_final = x + 190
+        self.patrulhando = True
 
         self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect(topleft=(x, y))
+        self.mask = pygame.mask.from_surface(self.image)
 
-    def load_sprites(self):
-        """Carrega os sprites e os divide em frames."""
-        if self.state not in SPRITES[MAPA2][INIMIGO3MP2]:
-            print(f"Erro: Estado {self.state} não encontrado em SPRITES")
-            return
+    def carregar_todos_sprites(self):
+        for estado in SPRITES[MAPA2][INIMIGO3MP2]:
+            info = SPRITES[MAPA2][INIMIGO3MP2][estado]
+            sprite_sheet = pygame.image.load(info["file"]).convert_alpha()
+            frames = self.load_frames(info["frames"], info["width"], info["height"], sprite_sheet)
+            frames_flip = [pygame.transform.flip(f, True, False) for f in frames]
+            self.sprites_por_estado[estado] = frames
+            self.sprites_flip_por_estado[estado] = frames_flip
 
-        try:
-            sprite_info = SPRITES[MAPA2][INIMIGO3MP2][self.state]
-            self.sprite_sheet = pygame.image.load(sprite_info["file"]).convert_alpha()
-            self.frames = self.load_frames(sprite_info["frames"], sprite_info["width"], sprite_info["height"])
-        except pygame.error:
-            print(f"Erro ao carregar sprite {sprite_info['file']}")
+    def mudar_estado(self, novo_estado):
+        if self.state != novo_estado:
+            self.state = novo_estado
+            self.frames = self.sprites_por_estado[novo_estado]
+            self.frames_flip = self.sprites_flip_por_estado[novo_estado]
+            self.frame_index = 0
+            self.animation_timer = 0
 
-    def load_frames(self, frame_count, width, height):
-        """Divide a sprite sheet em frames individuais."""
+    def load_frames(self, frame_count, width, height, sprite_sheet):
         frames = []
         for i in range(frame_count):
             x = i * width
-            frame = self.sprite_sheet.subsurface(pygame.Rect(x, 0, width, height))
-            frame = pygame.transform.scale(frame, (80, 80))
+            frame = sprite_sheet.subsurface(pygame.Rect(x, 0, width, height))
+            if self.state == INIMIGO3MP2ATTACK:
+                frame = pygame.transform.scale(frame, (50, 50))
+            else:
+                frame = pygame.transform.scale(frame, (70, 70))
             frames.append(frame)
         return frames
-    
-    # def receber_dano(self, dano, atacando=False):
-    #     """Método para diminuir a vida do inimigo quando receber dano."""
-    #     if atacando:  # Verifica se o jogador está atacando
-    #         self.state = INIMIGO1MP1DANO
-    #         self.load_sprites()
-    #         self.vida -= dano
-    #         if self.vida <= 0:
-    #             self.morrer()
 
-    # def morrer(self):
-    #     """Define o estado de morte do inimigo e mantém a imagem parada."""
-    #     self.state = INIMIGO1MP1MORTO
-    #     self.load_sprites()
-    #     self.frame_index = 0  # Garante que apenas o primeiro frame da morte seja mostrado
-    #     self.image = self.frames[self.frame_index]  # Define a imagem para a de morte
-    #     self.velocidade_x = 0  # Impede movimento
-    #     self.velocidade_y = 0
-    #     self.atacando = False
-    #     self.patrulhando = False
-    #     self.dano = 0
+    def update_animation(self):
+        if not self.frames:
+            return
 
-# --------------------------------------------- versão enquanto não tem sprite
+        velocidade_anim = 6 if self.state == INIMIGO3MP2ATTACK else 10
+
+        self.animation_timer += 1
+        if self.animation_timer >= velocidade_anim:
+            self.frame_index += 1
+            self.animation_timer = 0
+
+            if self.state == INIMIGO3MP2ATTACK:
+                if self.frame_index >= len(self.frames):
+                    self.mudar_estado(INIMIGO3MP2IDLE)
+                    self.atacando = False
+                    return
+            else:
+                self.frame_index %= len(self.frames)
+
+        frame = self.frames[self.frame_index]
+        self.image = frame if self.facing_right else self.frames_flip[self.frame_index]
+        if self.state == INIMIGO3MP2ATTACK:
+            self.image = pygame.transform.scale(self.image, (95, 95))
+        old_center = self.rect.center
+        self.rect = self.image.get_rect()
+        self.rect.center = old_center
+        self.mask = pygame.mask.from_surface(self.image)
 
     def receber_dano(self, dano, atacando=False):
-        # Método para diminuir a vida do inimigo quando receber dano.
         if atacando:
             self.vida -= dano
             if self.vida <= 0:
                 self.morrer()
 
     def morrer(self):
-        """Remove o inimigo da cena, já que não há sprite de morte."""
-        self.kill()  # Remove da tela e dos grupos
-
-# --------------------------------------------------------------------------------------
-
-    def colisao_horizontal(self):
-        """Verifica colisão horizontal com os retângulos do mapa."""
-        for rect in self.colisao_rects:
-            if self.rect.colliderect(rect):
-                return rect
-        return None
+        self.kill()
 
     def colisao_vertical(self):
-        """Verifica colisão vertical com os retângulos do mapa."""
         for rect in self.colisao_rects:
             if self.rect.colliderect(rect):
                 return rect
         return None
-    
-
-
-    def update_animation(self):
-        """Atualiza a animação do inimigo."""
-        if self.state == INIMIGO1MP1MORTO:
-            return  # Se o inimigo estiver morto, não atualiza nada
-
-        if not self.frames:
-            return  # Evita erro se não houver frames
-
-        self.animation_timer += 1
-        if self.animation_timer >= 10:  # Tempo entre cada frame
-            self.frame_index = (self.frame_index + 1) % len(self.frames)
-            self.animation_timer = 0
-
-
-        # Atualiza o sprite conforme a direção
-        if not self.facing_right:
-            self.image = self.frames[self.frame_index]
-        else:
-            self.image = pygame.transform.flip(self.frames[self.frame_index], True, False)
-
-    def mudar_estado(self, novo_estado):
-        if self.state != novo_estado:
-            self.state = novo_estado
-            self.load_sprites()
-            self.frame_index = 0
-            self.image = pygame.transform.flip(self.frames[self.frame_index], True, False) 
-        
-            if not self.facing_right:
-                self.image = self.frames[self.frame_index]
 
     def patrulhar(self):
-        if self.patrulhando:
-            self.atacando = False
-            self.mudar_estado(INIMIGO3MP2IDLE)
-        # Movimento de patrulha entre os pontos x_inicial e x_final
-            if self.facing_right:
+        self.mudar_estado(INIMIGO3MP2IDLE)
+        if self.facing_right:
+            if self.ha_chao_a_frente(10):
                 self.rect.x += self.velocidade_x
-                if self.rect.right >= self.x_final:  # Se chegar ao limite direito
-                    self.rect.right = self.x_final  # Garantir que ele não ultrapasse o limite
-                    self.facing_right = False  # Mudar a direção para a esquerda
-                    
+                if self.rect.right >= self.x_final:
+                    self.rect.right = self.x_final
+                    self.facing_right = False
             else:
+                self.facing_right = False
+        else:
+            if self.ha_chao_a_frente(-10):
                 self.rect.x -= self.velocidade_x
-                if self.rect.left <= self.x_inicial:  # Se chegar ao limite esquerdo
-                    self.rect.left = self.x_inicial  # Garantir que ele não ultrapasse o limite
-                    self.facing_right = True  # Mudar a direção para a direita
-                    
-        else:
-        # Caso não esteja patrulhando, ele apenas se move com a velocidade definida
-           self.rect.x += self.velocidade_x
+                if self.rect.left <= self.x_inicial:
+                    self.rect.left = self.x_inicial
+                    self.facing_right = True
+            else:
+                self.facing_right = True
 
-    def atacar(self):
-        distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
-        """Método para iniciar o ataque."""
-        if distancia <= 33 or self.rect.colliderect(self.jogador.rect):
-            self.patrulhando = False
-            self.atacando = True
-            self.mudar_estado(INIMIGO3MP2ATTACK)
-        else:
-            self.atacando = False
-            self.patrulhando = True
-            self.patrulhar()
+    def ha_chao_a_frente(self, offset_x):
+        check_x = self.rect.midbottom[0] + offset_x
+        check_y = self.rect.midbottom[1] + 50
+        ponto_teste = pygame.Rect(check_x, check_y, 1, 1)
+        for rect in self.colisao_rects:
+            if rect.colliderect(ponto_teste):
+                return True
+        return False
 
     def perseguir(self):
-        self.atacando = False
-        self.mudar_estado(INIMIGO1MP1IDLE)
-        """Função de perseguição do inimigo."""
+        self.mudar_estado(INIMIGO3MP2IDLE)
         if self.jogador.rect.centerx > self.rect.centerx:
-            self.rect.x += self.velocidade_x  # Mover para a direita
-            self.facing_right = True
-            self.mudar_estado(INIMIGO1MP1IDLE)
+            if self.ha_chao_a_frente(10):
+                self.rect.x += self.velocidade_x
+            if not self.facing_right:
+                self.facing_right = True
         else:
-            self.mudar_estado(INIMIGO1MP1IDLE)
-            self.rect.x -= self.velocidade_x  # Mover para a esquerda
-            self.facing_right = False
+            if self.ha_chao_a_frente(-10):
+                self.rect.x -= self.velocidade_x
+            if self.facing_right:
+                self.facing_right = False
+
+    def atacar(self):
+        if not self.atacando:
+            self.atacando = True
+            self.mudar_estado(INIMIGO3MP2ATTACK)
 
     def update(self):
+        if self.atacando:
+            self.velocidade_y += self.gravity
+            self.rect.y += self.velocidade_y
 
-        if self.state == INIMIGO1MP1MORTO:
-            return  # Sai da função para não atualizar nada
-        
+            colidiu = self.colisao_vertical()
+            if colidiu:
+                if self.velocidade_y > 0:
+                    self.rect.bottom = colidiu.top
+                elif self.velocidade_y < 0:
+                    self.rect.top = colidiu.bottom
+                self.velocidade_y = 0
+
+            if pygame.sprite.collide_mask(self, self.jogador):
+                self.jogador.receber_dano(self.dano)
+
+            self.update_animation()
+            return
+
         distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
         distanciab = abs(self.x_final - self.x_inicial)
 
         if distancia >= distanciab:
             self.patrulhando = True
-            self.atacando = False
-            self.mudar_estado(INIMIGO3MP2IDLE)
             self.patrulhar()
         else:
             self.patrulhando = False
-            self.mudar_estado(INIMIGO3MP2IDLE)
             self.perseguir()
-
-            if distancia <= 33 or self.rect.colliderect(self.jogador.rect):
-                self.atacando = True
-                self.patrulhando = False
-                self.mudar_estado(INIMIGO3MP2ATTACK)
+            if distancia <= 33 or pygame.sprite.collide_mask(self, self.jogador):
                 self.atacar()
+
+        self.velocidade_y += self.gravity
+        self.rect.y += self.velocidade_y
+
+        colidiu = self.colisao_vertical()
+        if colidiu:
+            if self.velocidade_y > 0:
+                self.rect.bottom = colidiu.top
+            elif self.velocidade_y < 0:
+                self.rect.top = colidiu.bottom
+            self.velocidade_y = 0
+
+        if pygame.sprite.collide_mask(self, self.jogador):
+            self.jogador.receber_dano(self.dano)
+
+        self.mask = pygame.mask.from_surface(self.image)
+        self.update_animation()
+

@@ -518,8 +518,8 @@ class Game:
                 self.npc_G = NPC_Gab(x=463, y=990, zoom_level=self.zoom_level)
                 self.todos_sprites.add(self.npc_G)
                 inimigo3 = inimigo.Inimigo2mp2(x=678, y=1150, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
-                # inimigo4 = inimigo.Inimigo3mp2(x=678, y=1100, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
-                lista_inimigos_mapa.extend([inimigo3])
+                inimigo4 = inimigo.Inimigo3mp2(x=1730, y=1100, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
+                lista_inimigos_mapa.extend([inimigo3, inimigo4])
                 print(f"[DEBUG] Inimigo2mp2 criado no mapa: {id(inimigo3)}")
             except Exception as e: print(f"ERRO ao criar inimigos para Mapa.tmx: {e}")
 
