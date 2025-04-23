@@ -66,23 +66,23 @@ SPRITES = {
 
     "BOSS_FINAL": {
         # ... (entradas existentes para IDLE, FALLING, PROJECTILE, MELEE, HIT, DEATH) ...
-        BOSS_IDLE: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
-        BOSS_WALK: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
-        BOSS_CHARGE_FALLING: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
-        BOSS_ATTACK_FALLING: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
-        BOSS_CHARGE_PROJECTILE: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
-        BOSS_ATTACK_PROJECTILE: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
-        BOSS_CHARGE_MELEE: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
-        BOSS_ATTACK_MELEE: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
-        BOSS_HIT: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
-        BOSS_DEATH: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
-
+        BOSS_IDLE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 300, "height": 420}, 
+        BOSS_HIT :{"file": "img/sala_boss/boss_hit.png", "frames": 5, "width": 300, "height": 420}, 
+        BOSS_CHARGE_FALLING :{"file": "img/sala_boss/boss_meteoro.png", "frames": 21, "width": 300, "height": 420}, 
+        BOSS_CHARGE_PROJECTILE :{"file": "img/sala_boss/boss_projetil.png", "frames": 19, "width": 300, "height": 420}, 
+        BOSS_CHARGE_MELEE :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420}, 
+        BOSS_ATTACK_FALLING :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 300, "height": 420}, 
+        BOSS_ATTACK_PROJECTILE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 300, "height": 420}, 
+        BOSS_ATTACK_MELEE :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420}, 
+        # BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420},
+        # BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420},
+        BOSS_DEATH :{"file": "img/sala_boss/boss_morto.png", "frames": 24, "width": 517, "height": 724},
         # <<< ADICIONADO >>>
         # Use seus arquivos ou mantenha placeholder.
         # CHARGE pode ser um brilho ou pose diferente.
-        BOSS_CHARGE_DASH: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        # BOSS_CHARGE_DASH: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
         # ATTACK pode ser a animação de IDLE/WALK ou uma específica de "voo".
-        BOSS_ATTACK_DASH: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
+        # BOSS_ATTACK_DASH: {"file": "placeholder", "frames": 1, "width": 120, "height": 180},
     },
     MAPA1:{
         INIMIGO1MP1:{
@@ -1190,13 +1190,14 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.largura_mapa = largura_mapa
         self.altura_mapa = altura_mapa # Essencial para FallingObject
 
-        self.vida_maxima = 16; self.vida = self.vida_maxima
-        self.facing_right = False; self.no_chao = True; self.is_dead = False
+        self.vida_maxima = 10; self.vida = self.vida_maxima
+        self.facing_right = True; self.no_chao = True; self.is_dead = False
         self.invulnerable_timer = 0; self.invulnerable_duration = 300
 
         self.state = BOSS_IDLE; self.frames = {}; self.frames_atual = []
         self.frame_index = 0; self.animation_timer = 0; self.animation_speed = 10
-        self.image = pygame.Surface((120, 180)); self.image.fill((50, 50, 50))
+        self.image = pygame.Surface((214, 300)) # <-- PROPORÇÃO
+        self.image.fill((50, 50, 50))
         self.rect = self.image.get_rect(midbottom=(x, y))
         self.original_x = self.rect.centerx # Guarda o CENTRO X inicial
         self.original_y = self.rect.centery # Guarda o CENTRO Y inicial
@@ -1238,7 +1239,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.dash_phase = 0
 
     # --- _create_placeholder (sem mudanças) ---
-    def _create_placeholder(self, color, size=(120, 180)):
+    def _create_placeholder(self, color, size=(214, 300)):
         surf = pygame.Surface(size, pygame.SRCALPHA)
         surf.fill(color)
         pygame.draw.rect(surf, (255,255,255), surf.get_rect(), 1)
@@ -1258,17 +1259,22 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         all_boss_states = list(colors.keys())
         for state in all_boss_states:
             info = boss_sprites_def.get(state)
-            placeholder_size = (120, 180)
+            if self.state != BOSS_DEATH:
+                placeholder_size = (214, 300) # <-- PROPORÇÃO
+                self.image = pygame.Surface((214, 300))
+            else: 
+                placeholder_size = (368, 517)
+                self.image = pygame.Surface((214, 300))
             loaded_ok = False
             if info:
-                 placeholder_size = (info.get("width", 120), info.get("height", 180))
+                 placeholder_size = (info.get("width", 214), info.get("height", 300)) # <-- PROPORÇÃO
                  if info.get("file") != "placeholder" and info.get("frames", 0) > 0:
                      try:
                          # (Código de carregamento de spritesheet omitido para brevidade, igual ao anterior)
                          if isinstance(info["file"], str): sprite_sheet = pygame.image.load(info["file"]).convert_alpha()
                          else: sprite_sheet = info["file"]
                          frames_list = []
-                         target_w, target_h = 120, 180
+                         target_w, target_h = 214, 300 # <-- PROPORÇÃO
                          for i in range(info["frames"]):
                              frame=sprite_sheet.subsurface(pygame.Rect(i*info["width"],0,info["width"],info["height"]))
                              frame = pygame.transform.scale(frame, (target_w, target_h)); frames_list.append(frame)
@@ -1302,6 +1308,12 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
             self.frame_index = (self.frame_index + 1) % len(self.frames_atual)
             base_image = self.frames_atual[self.frame_index]
             self.image = pygame.transform.flip(base_image, True, False) if not self.facing_right else base_image
+
+    # ATAQUE MELEE DO BOSS 
+    
+    
+    # FINAL DO ATAQUE DO MELEE 
+
 
     # --- Movimento Removido ---
     def update_movement_and_physics(self): pass
@@ -1390,6 +1402,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
             # IMPORTANTE: O DASH NÃO É FINALIZADO AQUI
             if self.chosen_attack == 'DASH': # << Se o ataque for DASH, sai daqui
                  return                   #    pois update() controla o fim.
+             
 
             attack_timer_ended = False
             duration_to_check = 0
@@ -1497,6 +1510,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         elif self.chosen_attack == 'MELEE':
             self.change_state(BOSS_ATTACK_MELEE)
             self.is_melee_active = True
+            
         # <<< ADICIONADO >>>
         elif self.chosen_attack == 'DASH':
             print("    [Execute DASH] Configurando variáveis do dash...")
@@ -1579,6 +1593,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         print(f"[BOSS] DANO RECEBIDO: {dano}, Vida: {self.vida}/{self.vida_maxima}")
 
         if self.vida <= 0:
+            self.change_state(BOSS_DEATH)
             self.vida = 0
             self.morrer()
         else:
@@ -1610,8 +1625,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
 
 
     # --- draw (sem mudanças) ---
-    def draw(self, surface): pass
-
+    def draw(self, surface): pass 
 
 # ---------------------------------------------------------------------------------Inimigo_Geleia/Slime - (Rai - Pode reclamar)
 

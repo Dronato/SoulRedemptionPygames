@@ -515,7 +515,7 @@ class Game:
 
         elif map_path == "Mapa(2).tmx":
             try:
-                self.npc_G = NPC_Gab(x=463, y=990, zoom_level=self.zoom_level)
+                self.npc_G = NPC_Gab(x=463, y=970, zoom_level=self.zoom_level)
                 self.todos_sprites.add(self.npc_G)
                 inimigo3 = inimigo.Inimigo2mp2(x=678, y=1150, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
                 inimigo4 = inimigo.Inimigo3mp2(x=1730, y=1100, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
@@ -765,6 +765,7 @@ class Game:
                                     self.tocar_cutscene("cutscenes/Cutscene 01.mp4", "cutscenes/Cutscene-01.mp3")
                                     mapa_a_carregar = "SalaBoss.tmx"
                                  elif self.mapa_atual_path == "SalaBoss.tmx":
+                                     if self.boss_instance: self.boss_instance.update_animation()
                                      # Só sai da sala do boss se ele foi derrotado?
                                      if not self.boss_instance or self.boss_instance.is_dead:
                                          print("DEBUG: Saindo da Sala Boss -> Créditos/Menu")
@@ -800,7 +801,7 @@ class Game:
                         # Ações do Jogador
                         elif evento.key == pygame.K_LSHIFT or evento.key == pygame.K_RSHIFT:
                              if self.jogador: self.jogador.iniciar_dash()
-                        elif evento.key == pygame.K_z or evento.key == pygame.K_x: # Ataque (Z ou X)
+                        elif evento.key == pygame.K_f or evento.key == pygame.K_z: # Ataque (Z ou X)
                              if self.jogador: self.jogador.atacar(list(self.inimigos))
 
                 # --- Atualizações (se jogando e não em conversa) ---
@@ -945,6 +946,10 @@ class Game:
                     # --- Desenhar Jogo ---
                     # 1. Mapa
                     self.desenhar_mapa_com_zoom()
+                    
+                    # FUNÇÃO QUE DESENHA O EFEITO DA PLAYER
+                    self.jogador.desenhar_efeito_ataque(self.tela, self.deslocamento_camera_x, self.deslocamento_camera_y)
+                    
                     # 2. Sprites (com zoom)
                     for sprite in self.todos_sprites:
                             if isinstance(sprite, (inimigo.Inimigo2mp2, inimigo.ProjetilGeleia)):

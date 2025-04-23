@@ -25,11 +25,16 @@ SPRITES = {
     # ATTACK: {"file": "img/prota/dano_spritesheet.png", "frames": 5, "width": 340, "height": 320}, # Comentado
     PULO: {"file": "img/prota/pulo.png", "frames": 15, "width": 256, "height": 256},
     DASH: {"file": "img/prota/dash.png", "frames": 5, "width": 214, "height": 144},
-    ATTACK1: {"file": "img/prota/attack1.png", "frames": 6, "width": 339, "height": 402},
-    ATTACK2: {"file": "img/prota/attack2.png", "frames": 7, "width": 339, "height": 402},
-    ATTACK3: {"file": "img/prota/attack3.png", "frames": 8, "width": 339, "height": 402},
+    ATTACK1: {"file": "img/prota/attack1.png", "frames": 6, "width": 108, "height": 81},
+    ATTACK2: {"file": "img/prota/attack2.png", "frames": 7, "width": 108, "height": 126},
+    ATTACK3: {"file": "img/prota/attack3.png", "frames": 8, "width": 108, "height": 90},   
 }
 
+EFFECTS = {
+    ATTACK1: {"file": "img/prota/efeito1.png", "frames": 6, "width": 163, "height": 163},
+    ATTACK2: {"file": "img/prota/efeito2.png", "frames": 7, "width": 163, "height": 163},
+    ATTACK3: {"file": "img/prota/efeito3.png", "frames": 8, "width": 163, "height": 163},
+}
 # --- START OF FILE player.py ---
 
 import pygame
@@ -118,6 +123,13 @@ class Jogador(pygame.sprite.Sprite):
         self.is_attacking = False
         self.dano = 10
 
+        #Variaveis do Efeito
+        self.efeito_frames = []
+        self.efeito_index = 0
+        self.efeito_timer = 0
+        self.efeito_speed = 5 
+        self.load_efeito()
+
     # --- O resto do código da classe Jogador (load_sprites, atualizar, etc.) permanece o mesmo ---
     # ... (funções load_sprites, load_frames, receber_dano, etc.) ...
 
@@ -204,17 +216,9 @@ class Jogador(pygame.sprite.Sprite):
         except Exception as e:
             print(f"Erro ao carregar sprites para o estado {self.state}: {e}")
             # Fallback para um placeholder ou estado anterior, se possível
-            if IDLE in SPRITES and sprite_key != (IDLE, self.facing_right): # Evitar recursão infinita
-                print(f"Tentando carregar estado IDLE como fallback.")
-                self.state = IDLE
-                self.load_sprites()
-            else:
-                 # Criar um surface vazia como último recurso
-                 self.image = pygame.Surface((50, 50), pygame.SRCALPHA)
-                 self.image.fill((255,0,255)) # Magenta para indicar erro
-                 self.frames = [self.image]
-                 self.rect = self.image.get_rect(topleft=self.rect.topleft if hasattr(self, 'rect') else (0,0))
-                 self.collision_rect = self.rect.copy()
+            self.state = IDLE
+            self.load_sprites()
+
 
 
     def load_frames(self, frame_count, width, height):
@@ -281,9 +285,10 @@ class Jogador(pygame.sprite.Sprite):
 
     def atacar(self,inimigos):
         current_time = pygame.time.get_ticks()
-        # Não atacar se já estiver atacando, dando dash ou em outra ação
-        if self.is_attacking or self.dash_ativo:
-             return
+        # Não atacar se já estiver atacando, dando dash ou em outra ação    
+        # if self.is_attacking or self.dash_ativo:
+        #     print("Não pode atacar agora — ainda está atacando ou dando dash")
+        #     return
 
         # Limpar sequência se o intervalo for muito grande
         if current_time - self.last_attack_time > self.MAX_ATTACK_INTERVAL:
@@ -299,7 +304,10 @@ class Jogador(pygame.sprite.Sprite):
                 self.state = self.attack_sequence[-1]
                 self.frame_index = 0
                 self.is_attacking = True # Marcar que está atacando
+                
                 self.load_sprites() # Carregar sprites do ataque
+                self.load_efeito()
+                
                 print(f"Iniciou ataque: {self.state}")
             for inimigo in inimigos:
                 if self.rect.colliderect(inimigo.rect):
@@ -371,17 +379,28 @@ class Jogador(pygame.sprite.Sprite):
                 return        
 
         # --- Lógica de Estados e Input ---
+        
         if self.is_attacking:
-            # Animação de ataque continua até o fim
-            # A transição para IDLE será feita em update_animation ou aqui
-            if self.frame_index >= len(self.frames) - 1: # Chegou ao último frame
-                 # Verificar se há próximo ataque na sequência e se o input foi rápido o suficiente
-                 # (Essa lógica de combo pode precisar ser mais sofisticada)
-                 # Por agora, simplesmente volta para IDLE ao final da animação
-                 self.is_attacking = False
-                 self.attack_sequence.clear() # Limpa a sequência atual
-                 self.state = IDLE
-                 self.load_sprites()
+            if self.frame_index >= len(self.frames) - 1:
+                self.is_attacking = False
+                self.state = IDLE
+                self.load_sprites()
+                print("Animação de ataque terminou — pode atacar de novo!")
+                
+        # CODIGO ERRADO SUBSTITUIDO PELO ACIMA
+        
+        
+        # if self.is_attacking:
+        #     # Animação de ataque continua até o fim
+        #     # A transição para IDLE será feita em update_animation ou aqui
+        #     if self.frame_index >= len(self.frames) - 1: # Chegou ao último frame
+        #          # Verificar se há próximo ataque na sequência e se o input foi rápido o suficiente
+        #          # (Essa lógica de combo pode precisar ser mais sofisticada)
+        #          # Por agora, simplesmente volta para IDLE ao final da animação
+        #          self.is_attacking = False
+        #          self.attack_sequence.clear() # Limpa a sequência atual
+        #          self.state = IDLE
+        #          self.load_sprites()
                  # Não retorna aqui, permite que o movimento seja aplicado mesmo no último frame do ataque
 
         elif self.dash_ativo:
@@ -494,9 +513,9 @@ class Jogador(pygame.sprite.Sprite):
         #     self.vida_atual = 0 # Ou teletransportar para ponto seguro
 
         # Colisão com inimigos (usar collision_rect)
-        inimigos_atingidos = pygame.sprite.spritecollide(self, inimigos, False, collided=lambda s1, s2: s1.collision_rect.colliderect(s2.rect)) # Assume inimigo usa self.rect
+        inimigos_atingidos = pygame.sprite.spritecollide(self, inimigos, False, pygame.sprite.collide_mask)
         for inimigo in inimigos_atingidos:
-            self.receber_dano(1) # Ou dano específico do inimigo
+            self.receber_dano(1)
 
         # Atualizar estado de invulnerabilidade
         if self.invulneravel and tempo_atual - self.ultimo_dano > self.tempo_invulneravel:
@@ -663,5 +682,65 @@ class Jogador(pygame.sprite.Sprite):
                             # print('Dano Espinho Menor')
                             # self.vel_y = -5
                             # break
+
+# FUNÇÃO QUE DESENHA O ATAQUE
+
+    def load_efeito(self):
+        if self.state not in EFFECTS:
+            self.efeito_frames = []
+            print(f"Nenhum efeito definido para o estado: {self.state}")
+            return
+
+        effect_info = EFFECTS[self.state]
+        caminho = effect_info["file"]
+        frame_width = effect_info["width"]
+        frame_height = effect_info["height"]
+        num_frames = effect_info["frames"]
+        resize = effect_info.get("resize", (90, 90))  # Tamanho padrão caso não esteja definido
+
+        sheet = pygame.image.load(caminho).convert_alpha()
+        self.efeito_frames = []  # Limpa qualquer frame anterior
+
+        for i in range(num_frames):
+            frame = sheet.subsurface(pygame.Rect(i * frame_width, 0, frame_width, frame_height))
+            if resize:
+                frame = pygame.transform.scale(frame, resize)
+            self.efeito_frames.append(frame)
+
+
+    def desenhar_efeito_ataque(self, tela, deslocamento_x, deslocamento_y):
+        if self.state in EFFECTS:
+            if not self.efeito_frames:
+                return
+
+            self.efeito_timer += 1
+            if self.efeito_timer >= self.efeito_speed:
+                self.efeito_timer = 0
+                self.efeito_index = (self.efeito_index + 1) % len(self.efeito_frames)
+
+            if self.efeito_index < len(self.efeito_frames):
+                frame = self.efeito_frames[self.efeito_index]
+            else:
+                return  # Evita crash se por algum motivo a lista estiver errada
+
+            # Inverte horizontalmente se estiver virado para a esquerda
+            if not self.facing_right:
+                frame = pygame.transform.flip(frame, True, False)
+
+            # Obtem o centro do jogador no mundo real
+            centro_jogador_x = self.rect.centerx
+            centro_jogador_y = self.rect.centery
+
+            # Redimensiona o frame com o zoom atual
+            scaled_w = int(frame.get_width() * self.zoom_level)
+            scaled_h = int(frame.get_height() * self.zoom_level)
+            frame_scaled = pygame.transform.scale(frame, (scaled_w, scaled_h))
+
+            # Calcula a posição centralizada em relação ao jogador e à câmera
+            x_tela = centro_jogador_x * self.zoom_level + deslocamento_x - scaled_w // 2
+            y_tela = centro_jogador_y * self.zoom_level + deslocamento_y - scaled_h // 2
+
+            tela.blit(frame_scaled, (x_tela, y_tela))
+
 
 # --- END OF FILE player.py ---
