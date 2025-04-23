@@ -131,6 +131,7 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         self.is_jumping = False
         self.moving = False
         self.atacando = False  # Novo estado para verificar ataque
+        self.morto = False
         self.dano = 1
 
         self.tempo_ataque_inicio = 0
@@ -144,9 +145,10 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         self.tmx_data = tmx_data
         self.largura_mapa = largura_mapa
         self.altura_mapa = altura_mapa
+    
 
 
-        self.vida = 10  # Vida do inimigo
+        self.vida = 3 # Vida do inimigo
 
         # Carregar sprites
         self.frames = []
@@ -164,6 +166,8 @@ class Inimigo1mp1(pygame.sprite.Sprite):
 
         self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect(topleft=(x, y))
+        self.hitbox = pygame.Rect(self.rect.x + 10, self.rect.y + 10, self.rect.width - 20, self.rect.height - 20)
+
 
     def load_sprites(self):
         """Carrega os sprites e os divide em frames."""
@@ -195,6 +199,7 @@ class Inimigo1mp1(pygame.sprite.Sprite):
             self.load_sprites()
             self.vida -= dano
             if self.vida <= 0:
+                self.morto = True
                 self.morrer()
 
     def morrer(self):
@@ -207,6 +212,7 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         self.velocidade_y = 0
         self.atacando = False
         self.patrulhando = False
+        self.morto = True
         self.dano = 0
 
     
@@ -280,14 +286,15 @@ class Inimigo1mp1(pygame.sprite.Sprite):
     def atacar(self):
         distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
         """Método para iniciar o ataque."""
-        if distancia <= 33 or self.rect.colliderect(self.jogador.rect):
-            self.patrulhando = False
-            self.atacando = True
-            self.mudar_estado(INIMIGO1MP1ATTACK)
-        else:
-            self.atacando = False
-            self.patrulhando = True
-            self.patrulhar()
+        if self.atacando:
+            if distancia <= 20:
+                self.patrulhando = False
+                self.atacando = True
+                self.mudar_estado(INIMIGO1MP1ATTACK)
+            else:
+                self.atacando = False
+                self.patrulhando = True
+                self.patrulhar()
 
     def perseguir(self):
         self.atacando = False
@@ -320,36 +327,16 @@ class Inimigo1mp1(pygame.sprite.Sprite):
             self.mudar_estado(INIMIGO1MP1IDLE)
             self.perseguir()
 
-            if distancia <= 33 or self.rect.colliderect(self.jogador.rect):
+            if distancia <= 20:
                 self.atacando = True
                 self.patrulhando = False
-                self.mudar_estado(INIMIGO1MP1ATTACK)
                 self.atacar()
-                
-                
-
-
-        # if distancia <= 28 or self.rect.colliderect(self.jogador.rect):
-        #     self.atacando = True
-        #     self.patrulhando = False
-        #     self.state = INIMIGO1MP1ATTACK
-        #     self.atacar()
-        # elif distancia <= distanciab:
-        #     self.patrulhando = False
-        #     self.atacando = False
-        #     self.state = INIMIGO1MP1IDLE
-        #     self.perseguir()
-
-        # else:
-        #     self.patrulhando = True
-        #     self.atacando = False
-        #     self.state = INIMIGO1MP1IDLE
-        #     self.patrulhar()
 
 
     # Aplicar gravidade
         self.velocidade_y += self.gravity
         self.rect.y += self.velocidade_y
+        
 
     # Verificar colisões horizontais
         colidiu = self.colisao_horizontal()
@@ -383,14 +370,18 @@ class Inimigo1mp1(pygame.sprite.Sprite):
 
         inimigos_atingidos = pygame.sprite.spritecollide(self, self.grupo_jogador, False, collided=pygame.sprite.collide_mask)
         for jogador in inimigos_atingidos:
-            self.receber_dano(jogador.dano)
+            if hasattr(jogador, "atacando") and jogador.atacando:
+                self.receber_dano(jogador.dano, atacando=True)
 
+        self.hitbox.x = self.rect.x + 10
+        self.hitbox.y = self.rect.y + 10
         # **Chamando a atualização da animação!**
         self.update_animation()
 
     def draw(self, surface):
         """Desenha o inimigo na tela."""
         surface.blit(self.image, self.rect.topleft)
+        pygame.draw.rect(surface, (255, 0, 0), self.hitbox, 2)  # vermelho, só o contorno
 
 
 class Inimigo2mp1(pygame.sprite.Sprite):
@@ -625,46 +616,7 @@ class Inimigo2mp1(pygame.sprite.Sprite):
         """Desenha o inimigo na tela."""
         surface.blit(self.image, self.rect.topleft)
 
-class ProjetilOlho(pygame.sprite.Sprite):
-    def __init__(self, x, y, direcao, grupo_jogador, colisao_rects):
-        super().__init__()
-        self.colisao_rects = colisao_rects
-        try:
-            sprite_info = SPRITES[MAPA2][INIMIGO1MP2][INIMIGO1MP2TIRO]
-            sprite = pygame.image.load(sprite_info["file"]).convert_alpha()
-            sprite = pygame.transform.scale(sprite, (28, 28))
-        except:
-            sprite = pygame.Surface((40, 40), pygame.SRCALPHA)
-            pygame.draw.circle(sprite, (0, 255, 0), (20, 20), 20)
 
-        if direcao > 0:
-            sprite = pygame.transform.flip(sprite, True, False)
-
-
-        self.image = sprite
-        self.rect = self.image.get_rect(center=(x, y))
-        self.vel_x = 6 * direcao
-        self.dano = 1
-        self.grupo_jogador = grupo_jogador
-
-    def update(self):
-        self.rect.x += self.vel_x
-
-        # Colisão com jogador
-        atingidos = pygame.sprite.spritecollide(self, self.grupo_jogador, False, collided=pygame.sprite.collide_mask)
-        for jogador in atingidos:
-            jogador.receber_dano(self.dano)
-            self.kill()
-
-        # ✅ Colisão com o mapa (paredes)
-        for rect in self.colisao_rects:
-            if self.rect.colliderect(rect):
-                self.kill()
-                return
-
-        # Fora da tela
-        if self.rect.right < 0 or self.rect.left > LARGURA:
-            self.kill()
 
 class Inimigo1mp2(pygame.sprite.Sprite):
     def __init__(self, x, y,jogador, colisao_rects, tmx_data,largura_mapa, altura_mapa):
@@ -681,6 +633,7 @@ class Inimigo1mp2(pygame.sprite.Sprite):
         self.is_jumping = False
         self.moving = False
         self.atacando = False  # Novo estado para verificar ataque
+        self.ja_disparou = False
 
         self.raio_laser = None
         self.alvo_travado = None  # Posição do jogador quando o ataque começa
@@ -694,10 +647,17 @@ class Inimigo1mp2(pygame.sprite.Sprite):
         self.ultimo_ataque = 0
         self.dano = 2
 
-        self.laser_frame_index = 0
-        self.laser_anim_timer = 0
+
         self.laser_visivel = False
-        self.grupo_projeteis = pygame.sprite.Group()
+        
+        self.esta_atacando = False
+        self.laser_completo = False
+        self.tempo_inicio_laser = None
+        self.tempo_laser_completo = None
+        self.indicador_visivel = True  # Indicador de alvo
+        self.alvo_travado = None  # Alvo do laser
+        self.particulas = [] 
+
         
 
         self.jogador = jogador
@@ -719,15 +679,6 @@ class Inimigo1mp2(pygame.sprite.Sprite):
         self.x_final = x + 300  # Distância máxima para a direita
         self.patrulhando = True  # Estado de patrulha
         self.offset_y_ataque = 0  # Correção de altura durante ataque
-        if INIMIGO1MP2TIRO in SPRITES[MAPA2]:
-            self.laser_frames = self.carregar_laser_frames(
-                SPRITES[MAPA2][INIMIGO1MP2TIRO]["file"],
-                SPRITES[MAPA2][INIMIGO1MP2TIRO]["frames"]
-            )
-        else:
-            print("Erro: Sprite de laser não encontrado.")
-            self.laser_frames = []
-
 
         # Garantir que há pelo menos um frame válido
         if not self.frames:
@@ -800,27 +751,12 @@ class Inimigo1mp2(pygame.sprite.Sprite):
                 return rect
         return None
     
-    def carregar_laser_frames(self, caminho, num_frames):
-        imagem = pygame.image.load(caminho).convert_alpha()
-        largura = imagem.get_width() // num_frames
-        altura = imagem.get_height()
-        frames = []
-        for i in range(num_frames):
-            frame = imagem.subsurface(pygame.Rect(i * largura, 0, largura, altura))
-            frames.append(frame)
-        return frames
-        
 
 
     def update_animation(self):
         """Atualiza a animação do inimigo."""
         if self.state == INIMIGO1MP2MORTO:
             return  # Se o inimigo estiver morto, não atualiza nada
-        if self.esta_atacando and self.laser_frames:
-            self.laser_anim_timer += 1
-            if self.laser_anim_timer >= 4:  # velocidade da animação
-                self.laser_frame_index = (self.laser_frame_index + 1) % len(self.laser_frames)
-                self.laser_anim_timer = 0
 
         if not self.frames:
             return  # Evita erro se não houver frames
@@ -863,46 +799,50 @@ class Inimigo1mp2(pygame.sprite.Sprite):
         self.facing_right = self.jogador.rect.centerx > self.rect.centerx
         self.alvo_travado = (self.jogador.rect.centerx, self.jogador.rect.centery)
         self.tempo_ataque = pygame.time.get_ticks()
-        self.esta_atacando = True
+        self.esta_atacando = False
         self.indicador_visivel = True
         self.state = INIMIGO1MP2CARREGANDO # 1º estado do fluxo
         self.load_sprites()
+        self.carregar_laser(surface)
 
     def carregar_laser(self, surface):
         agora = pygame.time.get_ticks()
-        
-
-        if self.tempo_ataque is None:
-            return
 
         tempo_passado = agora - self.tempo_ataque
 
         if tempo_passado < 1000:
-            self.state = INIMIGO1MP2CARREGANDO  # Detecção (1s)
-        elif tempo_passado < 2000:
-            self.state = INIMIGO1MP2CARREGANDO  # Aviso (1s)
-            self.laser_visivel = True  # Mostra o aviso do laser
-        elif tempo_passado < 3000:
-            self.state = INIMIGO1MP2ATTACK       # Ataque (1s)
-            self.indicador_visivel = False
-            self.esta_atacando = True
-            self.atacar()
-        else:
-            # Fim do ataque, reset
-            self.esta_atacando = False
-            self.patrulhando = True
+            self.state = INIMIGO1MP2CARREGANDO  # 1º estágio
+            self.indicador_visivel = True
             self.laser_visivel = False
-            self.tempo_ataque = None
-            self.mudar_estado(INIMIGO1MP2IDLE)
+            self.esta_atacando = False
 
+        elif tempo_passado < 2000:
+            self.state = INIMIGO1MP2CARREGANDO  # 2º estágio: aviso
+            self.indicador_visivel = True
+            self.laser_visivel = True
+            self.esta_atacando = False
+
+        elif tempo_passado < 3000:
+            if not self.esta_atacando:
+                self.atacar()  # Executa só uma vez
+            self.laser_visivel = True
+
+        else:
+            # Reset do ataque
+            self.tempo_ataque = None
+            self.alvo_travado = None
+            self.indicador_visivel = False
+            self.laser_visivel = False
+            self.esta_atacando = False
+            self.mudar_estado(INIMIGO1MP2IDLE)
     def atacar(self):
+        print("Atacando!")  # só pra testar
         self.state = INIMIGO1MP2ATTACK
         self.load_sprites()
         self.frame_index = 0
         self.image = self.frames[self.frame_index]
-        self.indicador_visivel = False
         self.esta_atacando = True
-        self.disparar_projétil()
+        self.indicador_visivel = False
 
 
     def laser_atingiu_jogador(self):
@@ -926,8 +866,8 @@ class Inimigo1mp2(pygame.sprite.Sprite):
 
         distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
         distanciab = abs(self.x_final - self.x_inicial)
-
-        if self.esta_atacando:
+        
+        if self.tempo_ataque:
             self.carregar_laser(surface)
         elif distancia <= distanciab:
             self.detectar_jogador(surface)
@@ -987,22 +927,10 @@ class Inimigo1mp2(pygame.sprite.Sprite):
         self.update_animation()
         self.mask = pygame.mask.from_surface(self.image)
 
-    def disparar_projétil(self):
-        self.facing_right = self.jogador.rect.centerx > self.rect.centerx  # virar para o jogador
-        direcao = 1 if self.facing_right else -1
-        proj = ProjetilOlho(
-            self.rect.centerx,
-            self.rect.centery,
-            direcao,
-            self.grupo_jogador,
-            self.colisao_rects  # <<< adiciona os rects aqui
-        )
 
-        self.grupo_projeteis.add(proj)
 
     
     def draw(self, surface, zoom_level=1.0, deslocamento_camera_x=0, deslocamento_camera_y=0):
-        # Desenha o inimigo
         surface.blit(self.image, self.rect.topleft)
 
         if self.alvo_travado:
@@ -1011,44 +939,126 @@ class Inimigo1mp2(pygame.sprite.Sprite):
             x2 = self.alvo_travado[0] * zoom_level + deslocamento_camera_x
             y2 = self.alvo_travado[1] * zoom_level + deslocamento_camera_y
 
-            # Indicador visual (linha amarela antes do ataque)
+            # Indicador visual antes do ataque
             if self.indicador_visivel:
-                pygame.draw.line(surface, (255, 255, 0), (x1, y1 - 11), (x2, y2), 2)
+                pygame.draw.line(surface, (255, 255, 0), (x1, y1 - 11), (x2, y2), 3)
 
-            # Feixe de laser (durante o ataque)
-            if self.esta_atacando and self.laser_frames:
-                for proj in self.grupo_projeteis:
-                    proj_image = pygame.transform.scale(
-                        proj.image,
-                        (
-                            int(proj.image.get_width() * zoom_level),
-                            int(proj.image.get_height() * zoom_level)
-                        )
-                    )
-                    proj_x = proj.rect.x * zoom_level + deslocamento_camera_x
-                    proj_y = proj.rect.y * zoom_level + deslocamento_camera_y
-                    surface.blit(proj_image, (proj_x, proj_y))
-                laser_img = self.laser_frames[self.laser_frame_index]
+            if not self.esta_atacando and self.laser_completo:
+                self.particulas.clear()
 
-                origem = self.rect.center
-                destino = self.alvo_travado
+            # Lógica do laser
+            if self.esta_atacando:
 
-                dx = destino[0] - origem[0]
-                dy = destino[1] - origem[1]
-                angulo = math.degrees(math.atan2(-dy, dx))
+                if not hasattr(self, "tempo_inicio_laser") or self.tempo_inicio_laser is None:
+                    print("Inicializando tempo_inicio_laser...")
+                    self.tempo_inicio_laser = pygame.time.get_ticks()  # Inicializa o tempo
+                    self.laser_completo = False  # Garantir que o laser esteja em estado inicial
+                    print(f"tempo_inicio_laser inicializado: {self.tempo_inicio_laser}")
 
-                laser_rotacionado = pygame.transform.rotate(laser_img, angulo)
-                laser_rect = laser_rotacionado.get_rect(center=origem)
+                tempo_passado = pygame.time.get_ticks() - self.tempo_inicio_laser
+                print(f"Tempo passado desde início do laser: {tempo_passado}ms")
 
-                # Garante que a máscara não quebre o jogo
-                try:
-                    self.mask = pygame.mask.from_surface(laser_rotacionado)
-                    self.laser_rect = laser_rect
-                except:
-                    self.mask = None
-                    self.laser_rect = None
+                duracao_laser = 700
+                delay_apos_laser = 800
 
-                surface.blit(laser_rotacionado, laser_rect.topleft)
+                dx = x2 - x1
+                dy = y2 - y1
+
+                if not self.laser_completo:
+                    progresso = min(1, tempo_passado / duracao_laser)
+                    x2_animado = x1 + dx * progresso
+                    y2_animado = y1 + dy * progresso
+
+                    sombra_offset = 5
+                    for i in range(6):  # Número de camadas
+                        alpha = int(20 + (i * 12))  # Começa mais claro, termina mais opaco
+                        largura = 12 - i  # Camadas mais internas são mais finas
+
+                        sombra_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+                        cor_sombra = (255, 0, 0, alpha)  # RGBA: vermelho com transparência
+                        pygame.draw.line(sombra_surface, cor_sombra, 
+                                        (x1 + sombra_offset, y1 - 11 + sombra_offset), 
+                                        (x2_animado + sombra_offset, y2_animado + sombra_offset), 
+                                        largura)
+                        surface.blit(sombra_surface, (0, 0))
+                    # Laser vermelho neon com brilho
+                    pygame.draw.line(surface, (255, 0, 0, 80), (x1, y1 - 11), (x2_animado, y2_animado), 4)
+
+                    vibração_offset = random.randint(-2, 2)
+                    pygame.draw.line(surface, (255, 0, 0, 80), 
+                                    (x1 + vibração_offset, y1 - 11 + vibração_offset), 
+                                    (x2_animado + vibração_offset, y2_animado + vibração_offset), 4)
+
+                    # Efeito glow (brilho)
+                    glow_offset = 3
+                    pygame.draw.line(surface, (255, 0, 0, 80), 
+                                    (x1 - glow_offset, y1 - 11 - glow_offset), 
+                                    (x2_animado - glow_offset, y2_animado - glow_offset), 
+                                    6)  # Camada adicional para o brilho
+
+                    # Adicionando círculos nas pontas do laser para deixá-las arredondadas
+                    
+                    pygame.draw.circle(surface, (255, 0, 0, 80), (x2_animado, y2_animado), 4)  # Círculo na ponta final
+
+                    if progresso >= 1:
+                        self.laser_completo = True
+                        self.tempo_laser_completo = pygame.time.get_ticks()
+                        print("Laser completo! Tempo do laser completo:", self.tempo_laser_completo)
+
+                else:
+                    tempo_desde_completo = pygame.time.get_ticks() - self.tempo_laser_completo
+                    print(f"Tempo desde que o laser foi completado: {tempo_desde_completo}ms")
+                    if tempo_desde_completo <= delay_apos_laser:
+                        sombra_offset = 5
+                        # Sombra com gradiente de vermelho
+                        for i in range(10):
+                            intensidade = 255 - int((255 / 10) * i)
+                            pygame.draw.line(surface, (intensidade, 0, 0), 
+                                            (x1 + sombra_offset, y1 - 11 + sombra_offset), 
+                                            (x2 + sombra_offset, y2 + sombra_offset), 
+                                            5 - i)
+
+                        # Laser vermelho neon
+                        pygame.draw.line(surface, (255, 0, 0, 80), (x1, y1 - 11), (x2, y2), 6)
+
+                        vibração_offset = random.randint(-2, 2)
+                        pygame.draw.line(surface, (255, 0, 0, 80), 
+                                        (x1 + vibração_offset, y1 - 11 + vibração_offset), 
+                                        (x2 + vibração_offset, y2 + vibração_offset), 4)
+
+                        # Efeito glow (brilho)
+                        glow_offset = 3
+                        pygame.draw.line(surface, (255, 0, 0, 80), 
+                                        (x1 - glow_offset, y1 - 11 - glow_offset), 
+                                        (x2 - glow_offset, y2 - glow_offset), 
+                                        8)
+
+                        # Adicionando círculos nas pontas do laser para deixá-las arredondadas
+                       
+                        pygame.draw.circle(surface, (255, 0, 0, 80), (x2, y2), 4)  # Círculo na ponta final
+
+                    else:
+                        print("Resetando o ataque de laser...")
+                        self.esta_atacando = False
+                        if hasattr(self, "tempo_inicio_laser"):
+                            del self.tempo_inicio_laser
+                        if hasattr(self, "tempo_laser_completo"):
+                            del self.tempo_laser_completo
+                        if hasattr(self, "laser_completo"):
+                            del self.laser_completo
+                        self.laser_completo = False  # Garantir reset correto
+
+                    if self.laser_completo:
+                        self.particulas.append([x2, y2, random.randint(-5, 5), random.randint(-5, 5)])
+
+                    for part in self.particulas:
+                        pygame.draw.circle(surface, (255, 0, 0, 80), (int(part[0]), int(part[1])), 3)
+                        part[0] += part[2]
+                        part[1] += part[3]
+
+                        if part[0] < 0 or part[1] < 0 or part[0] > surface.get_width() or part[1] > surface.get_height():
+                            self.particulas.remove(part)
+                            
 
 class BossProjectile(pygame.sprite.Sprite):
     """Projétil disparado pelo Boss."""
