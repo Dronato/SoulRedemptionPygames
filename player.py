@@ -304,7 +304,8 @@ class Jogador(pygame.sprite.Sprite):
                 self.state = self.attack_sequence[-1]
                 self.frame_index = 0
                 self.is_attacking = True # Marcar que está atacando
-                
+                self.vel_x = 0
+                self.vel_y = 0
                 self.load_sprites() # Carregar sprites do ataque
                 self.load_efeito()
                 

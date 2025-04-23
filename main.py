@@ -790,18 +790,24 @@ class Game:
                                 curou = self.jogador.recuperar_vida()
                                 self.exibir_popup("Vida recuperada!" if curou else "Não foi possível curar!")
 
-                        elif evento.key == pygame.K_f: # Conversar
+                        elif evento.key == pygame.K_f: # Tecla F: Prioriza Conversa, depois Ataque
+                             # Prioridade 1: Conversar se o prompt estiver visível e houver um NPC
                              if self.mostrar_msg_npc and self.npc:
                                  self.em_conversa = True
                                  if hasattr(self.npc, 'iniciar_conversa'):
                                       try: self.npc.iniciar_conversa()
                                       except Exception as e: print(f"Erro iniciar_conversa: {e}")
-                                 continue # Pular input normal
+                                 # A flag em_conversa bloqueia outras ações no início do loop
+
+                             # Prioridade 2: Atacar com F (se não iniciou conversa)
+                             elif self.jogador:
+                                 print("DEBUG: Tecla F pressionada para Ataque") # Log
+                                 self.jogador.atacar(list(self.inimigos))
 
                         # Ações do Jogador
                         elif evento.key == pygame.K_LSHIFT or evento.key == pygame.K_RSHIFT:
                              if self.jogador: self.jogador.iniciar_dash()
-                        elif evento.key == pygame.K_f or evento.key == pygame.K_z: # Ataque (Z ou X)
+                        elif evento.key == pygame.K_z: # Ataque (Z ou X)
                              if self.jogador: self.jogador.atacar(list(self.inimigos))
 
                 # --- Atualizações (se jogando e não em conversa) ---
