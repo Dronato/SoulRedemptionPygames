@@ -159,7 +159,7 @@ class Inimigo1mp1(pygame.sprite.Sprite):
 
         # Definir limites da patrulha (sentinela)
         self.x_inicial = x  # Ponto de partida do inimigo
-        self.x_final = x + 300  # Distância máxima para a direita
+        self.x_final = x + 200  # Distância máxima para a direita
         self.patrulhando = True  # Estado de patrulha
 
         # Garantir que há pelo menos um frame válido
@@ -1866,7 +1866,7 @@ class Inimigo2mp2(pygame.sprite.Sprite):
         self.altura_mapa = altura_mapa
 
         self.x_inicial = x
-        self.x_final = x + 201
+        self.x_final = x + 170
         self.grupo_projeteis = pygame.sprite.Group()
 
         self.tempo_ataque = 0
