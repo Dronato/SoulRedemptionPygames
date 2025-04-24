@@ -60,6 +60,7 @@ class Jogador(pygame.sprite.Sprite):
         self.load_sprites()
         # self.frame_index = 0 # frame_index já foi definido antes e resetado em load_sprites se necessário
         self.image = self.frames[self.frame_index]
+        self.mask = pygame.mask.from_surface(self.image)
 
         # Definir rects de posição e colisão
         self.rect = self.image.get_rect(topleft=(x, y))
@@ -177,6 +178,7 @@ class Jogador(pygame.sprite.Sprite):
             # Garantir que a imagem atual seja definida corretamente ao carregar do cache
             self.frame_index = min(self.frame_index, len(self.frames) - 1)
             self.image = self.frames[self.frame_index]
+            self.mask = pygame.mask.from_surface(self.image)
             return
 
         # Carregar e processar se não estiver no cache
@@ -205,6 +207,7 @@ class Jogador(pygame.sprite.Sprite):
             self._sprites_cache[sprite_key] = frames
             self.frame_index = 0 # Resetar frame index ao carregar novos sprites
             self.image = self.frames[self.frame_index]
+            self.mask = pygame.mask.from_surface(self.image)
             # self.mask = pygame.mask.from_surface(self.image) # Atualizar máscara se usar colisão por máscara
 
             # Definir o rect inicial com base no primeiro frame carregado
@@ -516,7 +519,9 @@ class Jogador(pygame.sprite.Sprite):
         # Colisão com inimigos (usar collision_rect)
         inimigos_atingidos = pygame.sprite.spritecollide(self, inimigos, False, pygame.sprite.collide_mask)
         for inimigo in inimigos_atingidos:
-            self.receber_dano(1)
+            if self.rect.colliderect(inimigo.rect):
+                if hasattr(inimigo, "state") and not inimigo.morto:
+                    self.receber_dano(inimigo.dano)
 
         # Atualizar estado de invulnerabilidade
         if self.invulneravel and tempo_atual - self.ultimo_dano > self.tempo_invulneravel:
@@ -596,6 +601,7 @@ class Jogador(pygame.sprite.Sprite):
                  pass # Ou poderia ser movida para cá
 
             self.image = self.frames[self.frame_index]
+            self.mask = pygame.mask.from_surface(self.image)
             # Virar a imagem se necessário (Flip)
             if not self.facing_right:
                 self.image = pygame.transform.flip(self.image, True, False)
