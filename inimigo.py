@@ -66,14 +66,17 @@ SPRITES = {
 
     "BOSS_FINAL": {
         # ... (entradas existentes para IDLE, FALLING, PROJECTILE, MELEE, HIT, DEATH) ...
-        BOSS_IDLE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 300, "height": 420}, 
-        BOSS_HIT :{"file": "img/sala_boss/boss_hit.png", "frames": 5, "width": 300, "height": 420}, 
-        BOSS_CHARGE_FALLING :{"file": "img/sala_boss/boss_meteoro.png", "frames": 21, "width": 300, "height": 420}, 
-        BOSS_CHARGE_PROJECTILE :{"file": "img/sala_boss/boss_projetil.png", "frames": 19, "width": 300, "height": 420}, 
+        BOSS_IDLE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
+        BOSS_HIT :{"file": "img/sala_boss/boss_hit.png", "frames": 5, "width": 517, "height": 420}, 
+        BOSS_CHARGE_FALLING :{"file": "img/sala_boss/boss_meteoro.png", "frames": 21, "width": 517, "height": 420}, 
+        BOSS_CHARGE_PROJECTILE :{"file": "img/sala_boss/boss_projetil.png", "frames": 19, "width": 517, "height": 420}, 
         BOSS_CHARGE_MELEE :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420}, 
-        BOSS_ATTACK_FALLING :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 300, "height": 420}, 
-        BOSS_ATTACK_PROJECTILE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 300, "height": 420}, 
+        BOSS_ATTACK_FALLING :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
+        BOSS_ATTACK_PROJECTILE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
         BOSS_ATTACK_MELEE :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420}, 
+        BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_dash1.png", "frames": 6, "width": 517, "height": 420},
+        BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_dash2.png", "frames": 16, "width": 517, "height": 420},
+        BOSS_DEATH :{"file": "img/sala_boss/boss_morto.png", "frames": 24, "width": 517, "height": 420},
         # BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420},
         # BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420},
         BOSS_DEATH :{"file": "img/sala_boss/boss_morto.png", "frames": 24, "width": 517, "height": 724},
@@ -1197,13 +1200,21 @@ class BossProjectile(pygame.sprite.Sprite):
     def __init__(self, x, y, target_x, target_y, speed, colisao_rects, dano=1):
         super().__init__()
         self.size = 25 # Tamanho do placeholder (um pouco maior)
-        self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, (255, 0, 255), (self.size//2, self.size//2), self.size//2) # Magenta
-        pygame.draw.circle(self.image, (255, 255, 255), (self.size//2, self.size//2), self.size//2, 2) # Borda Branca
+
+        self.caminho_imagem = None
+        # --- Se uma imagem for fornecida ---
+        if self.caminho_imagem:
+            imagem_original = pygame.image.load(self.caminho_imagem).convert_alpha()
+            self.image = pygame.transform.scale(imagem_original, (self.size, self.size))
+        else:
+            # --- Placeholder visual se imagem não for passada ---
+            self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+            pygame.draw.circle(self.image, (55, 55, 55), (self.size//2, self.size//2), self.size//2)
+            pygame.draw.circle(self.image, (0, 0, 0), (self.size//2, self.size//2), self.size//2, 2)
+
         self.rect = self.image.get_rect(center=(x, y))
         self.colisao_rects = colisao_rects
         self.dano = dano
-        self.morto = False
         self.speed = speed
         direction_x = target_x - x
         direction_y = target_y - y
@@ -1238,17 +1249,25 @@ class FallingObject(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
     def __init__(self, x, y, speed, colisao_rects, altura_mapa, dano=1):
         super().__init__()
         self.width, self.height = 50, 75 # Tamanho placeholder (BEM MAIOR)
+
         # --- Placeholder Visual (Amarelo Brilhante) ---
-        self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-        self.image.fill((0,0,0,0))
-        rect_interno = self.image.get_rect()
-        pygame.draw.rect(self.image, (255, 255, 0), rect_interno) # Amarelo Brilhante
-        pygame.draw.rect(self.image, (0, 0, 0), rect_interno, 3) # Borda Preta Grossa
+        self.caminho_imagem = "img/sala_boss/estaca.png"
+        
+        if self.caminho_imagem:
+            imagem_original = pygame.image.load(self.imagem_path).convert_alpha()
+            self.image = pygame.transform.scale(imagem_original, (self.width, self.height))
+        else:
+            # --- Placeholder Visual (Amarelo Brilhante) ---
+            self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            self.image.fill((0, 0, 0, 0))
+            rect_interno = self.image.get_rect()
+            pygame.draw.rect(self.image, (255, 255, 0), rect_interno)
+            pygame.draw.rect(self.image, (0, 0, 0), rect_interno, 3)
+
         # --- Fim Placeholder ---
         self.rect = self.image.get_rect(midbottom=(x, y))
         self.colisao_rects = colisao_rects # Retângulos sólidos do mapa
         self.dano = dano
-        self.morto = False
         self.speed = speed
         self.altura_mapa = altura_mapa
         print(f"[FallingObject CREATED] @ ({x:.0f},{y:.0f}) Speed:{speed}")
@@ -1283,14 +1302,19 @@ class FallingProjectile(pygame.sprite.Sprite):
         self.speed = speed
         self.colisao_rects = colisao_rects # Retângulos sólidos do mapa (para colisão com chão)
         self.altura_mapa = altura_mapa
-        self.morto = False
 
         # --- Aparência (similar ao BossProjectile ou customizada) ---
         self.size = 25 # Tamanho do projétil
-        self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
-        # Exemplo: Círculo amarelo com borda preta (para diferenciar do ataque azul/magenta)
-        pygame.draw.circle(self.image, (255, 255, 0), (self.size//2, self.size//2), self.size//2) # Amarelo
-        pygame.draw.circle(self.image, (0, 0, 0), (self.size//2, self.size//2), self.size//2, 2) # Borda Preta
+        self.caminho_imagem = None
+        # --- Se uma imagem for fornecida ---
+        if self.caminho_imagem:
+            imagem_original = pygame.image.load(self.caminho_imagem).convert_alpha()
+            self.image = pygame.transform.scale(imagem_original, (self.size, self.size))
+        else:
+            # --- Placeholder visual se imagem não for passada ---
+            self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+            pygame.draw.circle(self.image, (55, 55, 55), (self.size//2, self.size//2), self.size//2)
+            pygame.draw.circle(self.image, (0, 0, 0), (self.size//2, self.size//2), self.size//2, 2)
         # --- Fim Aparência ---
 
         # Posição inicial: x aleatório, y fixo acima da tela
@@ -1316,6 +1340,7 @@ class FallingProjectile(pygame.sprite.Sprite):
             #print(f"[FallingProjectile KILL] Off Screen Bottom: {self.rect}") # DEBUG opcional
             self.kill()
 
+
 class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
     # --- __init__ (Garante que altura_mapa está sendo passada) ---
     def __init__(self, x, y, jogador, colisao_rects, largura_mapa, altura_mapa):
@@ -1332,7 +1357,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
 
         self.state = BOSS_IDLE; self.frames = {}; self.frames_atual = []
         self.frame_index = 0; self.animation_timer = 0; self.animation_speed = 10
-        self.image = pygame.Surface((214, 300)) # <-- PROPORÇÃO
+        self.image = pygame.Surface((370, 300)) # <-- PROPORÇÃO
         self.image.fill((50, 50, 50))
         self.rect = self.image.get_rect(midbottom=(x, y))
         self.original_x = self.rect.centerx # Guarda o CENTRO X inicial
@@ -1375,7 +1400,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.dash_phase = 0
 
     # --- _create_placeholder (sem mudanças) ---
-    def _create_placeholder(self, color, size=(214, 300)):
+    def _create_placeholder(self, color, size=(370, 300)):
         surf = pygame.Surface(size, pygame.SRCALPHA)
         surf.fill(color)
         pygame.draw.rect(surf, (255,255,255), surf.get_rect(), 1)
@@ -1395,22 +1420,17 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         all_boss_states = list(colors.keys())
         for state in all_boss_states:
             info = boss_sprites_def.get(state)
-            if self.state != BOSS_DEATH:
-                placeholder_size = (214, 300) # <-- PROPORÇÃO
-                self.image = pygame.Surface((214, 300))
-            else: 
-                placeholder_size = (368, 517)
-                self.image = pygame.Surface((214, 300))
+            placeholder_size = (370, 300) # <-- PROPORÇÃO
             loaded_ok = False
             if info:
-                 placeholder_size = (info.get("width", 214), info.get("height", 300)) # <-- PROPORÇÃO
+                 placeholder_size = (info.get("width", 370), info.get("height", 300)) # <-- PROPORÇÃO
                  if info.get("file") != "placeholder" and info.get("frames", 0) > 0:
                      try:
                          # (Código de carregamento de spritesheet omitido para brevidade, igual ao anterior)
                          if isinstance(info["file"], str): sprite_sheet = pygame.image.load(info["file"]).convert_alpha()
                          else: sprite_sheet = info["file"]
                          frames_list = []
-                         target_w, target_h = 214, 300 # <-- PROPORÇÃO
+                         target_w, target_h = 370, 300 # <-- PROPORÇÃO
                          for i in range(info["frames"]):
                              frame=sprite_sheet.subsurface(pygame.Rect(i*info["width"],0,info["width"],info["height"]))
                              frame = pygame.transform.scale(frame, (target_w, target_h)); frames_list.append(frame)

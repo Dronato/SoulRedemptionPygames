@@ -23,7 +23,7 @@ SPRITES = {
     IDLE: {"file": "img/prota/parada.png", "frames": 6, "width": 176, "height": 148},
     WALK: {"file": "img/prota/andando.png", "frames": 10, "width": 198, "height": 144},
     # ATTACK: {"file": "img/prota/dano_spritesheet.png", "frames": 5, "width": 340, "height": 320}, # Comentado
-    PULO: {"file": "img/prota/pulo.png", "frames": 15, "width": 256, "height": 256},
+    PULO: {"file": "img/prota/pulo.png", "frames": 10, "width": 240, "height": 192},
     DASH: {"file": "img/prota/dash.png", "frames": 5, "width": 214, "height": 144},
     ATTACK1: {"file": "img/prota/attack1.png", "frames": 6, "width": 108, "height": 81},
     ATTACK2: {"file": "img/prota/attack2.png", "frames": 7, "width": 108, "height": 126},
@@ -440,7 +440,7 @@ class Jogador(pygame.sprite.Sprite):
                      self.no_chao = False # Saiu do chão
                      self.pulo_pressionado = True # Previne pulos múltiplos com uma só pressionada
                      # Opcional: Mudar estado para PULO
-                     # current_state = PULO # Descomentar se tiver animação de pulo
+                     current_state = PULO # Descomentar se tiver animação de pulo
                      print(f"Pulou! Pulos restantes: {self.pulos_restantes}")
             elif not (teclas[pygame.K_SPACE] or teclas[pygame.K_w]):
                  self.pulo_pressionado = False # Reseta quando a tecla é solta
@@ -458,12 +458,17 @@ class Jogador(pygame.sprite.Sprite):
             # Atualizar Estado (se mudou e não está atacando/dando dash)
             if current_state != self.state and not self.is_attacking and not self.dash_ativo:
                  # Adicionar verificação para estado de pulo/queda aqui se necessário
-                 if not self.no_chao and current_state == IDLE and PULO in SPRITES: # Se está no ar e parado, usar PULO?
-                     self.state = PULO
-                 else:
-                     self.state = current_state
-                 self.load_sprites()
-                 self.frame_index = 0 # Reinicia animação do novo estado
+                if not self.no_chao:
+                    # Se está no ar, manter o estado atual (pulo/queda), não trocar para outro
+                    if self.state != PULO and PULO in SPRITES:
+                        self.state = PULO
+                        self.load_sprites()
+                        self.frame_index = 0
+                else:
+                    if current_state != self.state and not self.is_attacking and not self.dash_ativo:
+                        self.state = current_state
+                        self.load_sprites()
+                        self.frame_index = 0
 
 
         # --- Movimentação e Colisão ---
