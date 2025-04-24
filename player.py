@@ -51,7 +51,7 @@ class Jogador(pygame.sprite.Sprite):
         # --- MOVER DEFINIÇÕES PARA CÁ ---
         self.facing_right = True # Definir ANTES de load_sprites
         self.animation_timer = 0
-        self.animation_speed = 8
+        self.animation_speed = 5
         self.frame_index = 0 # Definir frame_index inicial
         # --- FIM DAS DEFINIÇÕES MOVIDAS ---
         self.LAVA_SINK_DURATION = 750  # Milissegundos (0.75 segundos) para afundar antes de morrer
@@ -60,7 +60,6 @@ class Jogador(pygame.sprite.Sprite):
         self.load_sprites()
         # self.frame_index = 0 # frame_index já foi definido antes e resetado em load_sprites se necessário
         self.image = self.frames[self.frame_index]
-        self.mask = pygame.mask.from_surface(self.image)
 
         # Definir rects de posição e colisão
         self.rect = self.image.get_rect(topleft=(x, y))
@@ -86,9 +85,9 @@ class Jogador(pygame.sprite.Sprite):
         # Atributos de movimento e física
         self.vel_x = 0
         self.vel_y = 0
-        self.velocidade = 20
-        self.velocidade_dash = 7
-        self.forca_pulo = -13
+        self.velocidade = 7
+        self.velocidade_dash = 10
+        self.forca_pulo = -11
         self.gravidade = 0.8
         self.no_chao = False
         self.on_ramp = False # Flag para indicar se está em uma rampa

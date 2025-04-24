@@ -804,7 +804,7 @@ class Game:
                                  print("DEBUG: Tecla F pressionada para Ataque") # Log
                                  self.jogador.atacar(list(self.inimigos))
 
-                        # Ações do Jogador
+                        # Ações do JogadorW
                         elif evento.key == pygame.K_LSHIFT or evento.key == pygame.K_RSHIFT:
                              if self.jogador: self.jogador.iniciar_dash()
                         elif evento.key == pygame.K_z: # Ataque (Z ou X)
@@ -822,7 +822,18 @@ class Game:
                         if self.npc_F: self.npc_F.atualizar()
                     if self.mapa_atual_path == "Mapa(2).tmx":
                         if self.npc_G: self.npc_G.atualizar()
+                        self.jogador.velocidade_dash = 13
+                        self.jogador.velocidade = 9
+                        self.jogador.forca_pulo = -12
+                        self.jogador.animation_speed = 4
+                        self.jogador.gravidade = 1.2
                     # Atualizar Inimigos
+                    if self.mapa_atual_path == "SalaBoss.tmx":
+                        self.jogador.velocidade_dash = 10
+                        self.jogador.velocidade = 5
+                        self.jogador.forca_pulo = -9.5
+                        self.jogador.animation_speed = 7
+                        self.jogador.gravidade = 0.6
                     self.inimigos.update() # Chama update() de todos os inimigos no grupo
 
 
@@ -1071,4 +1082,4 @@ if __name__ == '__main__':
         if pygame.get_init(): print("DEBUG: Saindo pelo finally, quit()"); pygame.quit()
         print("DEBUG: Fim da execução.")
 
-# --- END OF FILE main.py ---
+# --- END OF FILE main.py ---wd
