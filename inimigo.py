@@ -1203,6 +1203,7 @@ class BossProjectile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
         self.colisao_rects = colisao_rects
         self.dano = dano
+        self.morto = False
         self.speed = speed
         direction_x = target_x - x
         direction_y = target_y - y
@@ -1247,6 +1248,7 @@ class FallingObject(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.rect = self.image.get_rect(midbottom=(x, y))
         self.colisao_rects = colisao_rects # Retângulos sólidos do mapa
         self.dano = dano
+        self.morto = False
         self.speed = speed
         self.altura_mapa = altura_mapa
         print(f"[FallingObject CREATED] @ ({x:.0f},{y:.0f}) Speed:{speed}")
@@ -1281,6 +1283,7 @@ class FallingProjectile(pygame.sprite.Sprite):
         self.speed = speed
         self.colisao_rects = colisao_rects # Retângulos sólidos do mapa (para colisão com chão)
         self.altura_mapa = altura_mapa
+        self.morto = False
 
         # --- Aparência (similar ao BossProjectile ou customizada) ---
         self.size = 25 # Tamanho do projétil
@@ -1321,6 +1324,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.colisao_rects = colisao_rects
         self.largura_mapa = largura_mapa
         self.altura_mapa = altura_mapa # Essencial para FallingObject
+        self.morto = False
 
         self.vida_maxima = 10; self.vida = self.vida_maxima
         self.facing_right = True; self.no_chao = True; self.is_dead = False
@@ -1765,6 +1769,7 @@ class ProjetilGeleia(pygame.sprite.Sprite):
     def __init__(self, x, y, direcao, grupo_jogador, colisao_rects):
         super().__init__()
         self.colisao_rects = colisao_rects
+        self.morto = False
         try:
             sprite_info = SPRITES[MAPA2][INIMIGO2MP2][INIMIGO2MP2PROJETIL]
             sprite = pygame.image.load(sprite_info["file"]).convert_alpha()
@@ -1831,6 +1836,7 @@ class Inimigo2mp2(pygame.sprite.Sprite):
         self.gravity = 0.5
         self.dano = 1
         self.vida = 3
+        self.morto = False
 
         self.jogador = jogador
         self.grupo_jogador = pygame.sprite.GroupSingle(jogador)
@@ -2098,6 +2104,7 @@ class Inimigo3mp2(pygame.sprite.Sprite):
         self.gravity = 0.5
         self.atacando = False
         self.dano = 1
+        self.morto = False
 
         self.jogador = jogador
         self.grupo_jogador = pygame.sprite.GroupSingle(self.jogador)

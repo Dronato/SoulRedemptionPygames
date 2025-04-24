@@ -520,7 +520,7 @@ class Jogador(pygame.sprite.Sprite):
         for inimigo in inimigos_atingidos:
             if self.rect.colliderect(inimigo.rect):
                 if hasattr(inimigo, "state") and not inimigo.morto:
-                    self.receber_dano(inimigo.dano)
+                    self.receber_dano(1)
 
         # Atualizar estado de invulnerabilidade
         if self.invulneravel and tempo_atual - self.ultimo_dano > self.tempo_invulneravel:
