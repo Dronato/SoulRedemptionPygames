@@ -90,7 +90,7 @@ SPRITES = {
     },
     MAPA1:{
         INIMIGO1MP1:{
-            INIMIGO1MP1IDLE:{"file": "img/mapa1/inimigo1/inimigo1_andando.png", "frames": 3, "width": 445, "height": 394},
+            INIMIGO1MP1IDLE:{"file": "img/mapa1/inimigo1/inimigo1_andando.png", "frames": 4, "width": 445, "height": 389},
             INIMIGO1MP1ATTACK:{"file": "img/mapa1/inimigo1/inimigo1mp1_ataque.png", "frames": 12, "width": 445, "height": 389},
             INIMIGO1MP1DANO:{"file": "img/mapa1/inimigo1/inimigo1mp1_dano.png", "frames": 10, "width": 445, "height": 389},
             INIMIGO1MP1MORTO:{"file": "img/mapa1/inimigo1/inimigo1mp1_morto.png", "frames": 1, "width": 445, "height": 389}
@@ -149,10 +149,10 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         self.tmx_data = tmx_data
         self.largura_mapa = largura_mapa
         self.altura_mapa = altura_mapa
-    
 
-
-        self.vida = 3 # Vida do inimigo
+        self.sofrendo_dano = False
+        self.dano_recebido = 0
+        self.vida = 4 # Vida do inimigo
 
         # Carregar sprites
         self.frames = []
@@ -194,17 +194,21 @@ class Inimigo1mp1(pygame.sprite.Sprite):
             frame = self.sprite_sheet.subsurface(pygame.Rect(x, 0, width, height))
             frame = pygame.transform.scale(frame, (80, 80))
             frames.append(frame)
+            if self.state == INIMIGO1MP1ATTACK:
+                frame = pygame.transform.scale(frame, (80, 80))
+
         return frames
     
     def receber_dano(self, dano, atacando=False):
         """Método para diminuir a vida do inimigo quando receber dano."""
-        if atacando:  # Verifica se o jogador está atacando
+        if atacando and not self.sofrendo_dano:
             self.state = INIMIGO1MP1DANO
             self.load_sprites()
-            self.vida -= dano
-            if self.vida <= 0:
-                self.morto = True
-                self.morrer()
+            self.index_anim = 0
+            self.sofrendo_dano = True
+            self.tempo_entre_frames = 100  # ou o valor que preferir
+            self.ultimo_frame = pygame.time.get_ticks()
+            self.dano_recebido = dano
 
     def morrer(self):
         self.dano = 0
@@ -390,6 +394,20 @@ class Inimigo1mp1(pygame.sprite.Sprite):
             for jogador in inimigos_atingidos:
                 self.receber_dano(jogador.dano)
 
+        if self.sofrendo_dano:
+            agora = pygame.time.get_ticks()
+            if agora - self.ultimo_frame > self.tempo_entre_frames:
+                self.ultimo_frame = agora
+                if self.index_anim < len(self.frames):
+                    self.image = self.frames[self.index_anim]
+                    self.index_anim += 1
+                else:
+                    self.sofrendo_dano = False
+                    self.vida -= self.dano_recebido
+                    if self.vida <= 0:
+                        self.morto = True
+                        self.morrer()
+                        
         self.hitbox.x = self.rect.x + 10
         self.hitbox.y = self.rect.y + 10
         # **Chamando a atualização da animação!**
@@ -1146,7 +1164,7 @@ class Inimigo1mp2(pygame.sprite.Sprite):
                        
 
                         laser_rect = pygame.Rect(min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1))
-                        laser_rect.inflate_ip(10, 10)
+                        laser_rect.inflate_ip(3, 3)
 
                         # Converte o rect do jogador para a tela (com zoom e câmera)
                         player_rect_tela = pygame.Rect(
