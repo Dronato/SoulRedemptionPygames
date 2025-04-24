@@ -980,7 +980,7 @@ class Game:
                     self.desenhar_mapa_com_zoom()
                     
                     # FUNÇÃO QUE DESENHA O EFEITO DA PLAYER
-                    self.jogador.desenhar_efeito_ataque(self.tela, self.deslocamento_camera_x, self.deslocamento_camera_y)
+                    self.jogador.desenhar_efeito_ataque(self.tela, self.deslocamento_camera_x, self.deslocamento_camera_y,self.inimigos)
                     
                     # 2. Sprites (com zoom)
                     for sprite in self.todos_sprites:

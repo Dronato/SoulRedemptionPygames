@@ -4,6 +4,7 @@ import random
 
 
 
+
 # Definição da tela e FPS
 tela = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 LARGURA, ALTURA = tela.get_size()
@@ -805,6 +806,12 @@ class Inimigo1mp2(pygame.sprite.Sprite):
 
     def update_animation(self):
         """Atualiza a animação do inimigo."""
+        if not self.frames or self.frame_index >= len(self.frames):
+            print(f"[ERRO] Frames vazios ou frame_index inválido para estado: {self.state}")
+            self.frame_index = 0
+            if self.frames:
+                self.image = self.frames[0]
+            return        
         if self.state == INIMIGO1MP2MORTO:
             return  # Se o inimigo estiver morto, não atualiza nada
 

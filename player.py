@@ -719,7 +719,8 @@ class Jogador(pygame.sprite.Sprite):
             self.efeito_frames.append(frame)
 
 
-    def desenhar_efeito_ataque(self, tela, deslocamento_x, deslocamento_y):
+    def desenhar_efeito_ataque(self, tela, deslocamento_x, deslocamento_y,inimigos):
+        
         if self.state in EFFECTS:
             if not self.efeito_frames:
                 return
@@ -752,6 +753,30 @@ class Jogador(pygame.sprite.Sprite):
             y_tela = centro_jogador_y * self.zoom_level + deslocamento_y - scaled_h // 2
 
             tela.blit(frame_scaled, (x_tela, y_tela))
+            
+            efeito_frame = self.efeito_frames[self.efeito_index]
+            if not self.facing_right:
+                efeito_frame = pygame.transform.flip(efeito_frame, True, False)
+
+            # Cria a mask a partir do frame original (sem escala de tela, só zoom se quiser precisão)
+            efeito_mask = pygame.mask.from_surface(efeito_frame)
+
+            # Posição real no mundo do centro do efeito (sem deslocamento de câmera)
+            efeito_pos_mundo = self.rect.center  # Posição do jogador no mundo, centro do efeito
+
+            # Corrige a posição para alinhar com o canto superior esquerdo da mask
+            efeito_rect = efeito_frame.get_rect(center=efeito_pos_mundo)
+
+            # Verifica colisão com cada inimigo
+            for inimigo in inimigos:
+                if not hasattr(inimigo, "mask") or not inimigo.mask:
+                    continue
+
+                offset = (inimigo.rect.left - efeito_rect.left, inimigo.rect.top - efeito_rect.top)
+
+                if efeito_mask.overlap(inimigo.mask, offset):
+                    print(f"[DEBUG] Efeito colidiu com inimigo em {inimigo.rect.topleft}")
+                    inimigo.receber_dano(2, atacando=True)
 
 
 # --- END OF FILE player.py ---
