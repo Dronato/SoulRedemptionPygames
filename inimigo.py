@@ -1238,8 +1238,8 @@ class BossProjectile(pygame.sprite.Sprite):
         else:
             # --- Placeholder visual se imagem não for passada ---
             self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
-            pygame.draw.circle(self.image, (55, 55, 55), (self.size//2, self.size//2), self.size//2)
-            pygame.draw.circle(self.image, (0, 0, 0), (self.size//2, self.size//2), self.size//2, 2)
+            pygame.draw.circle(self.image, (0, 0, 0), (self.size//2, self.size//2), self.size//2)
+            pygame.draw.circle(self.image, (55, 55, 55), (self.size//2, self.size//2), self.size//2, 2)
 
         self.rect = self.image.get_rect(center=(x, y))
         self.colisao_rects = colisao_rects
@@ -1281,17 +1281,8 @@ class FallingObject(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
 
         # --- Placeholder Visual (Amarelo Brilhante) ---
         self.caminho_imagem = "img/sala_boss/estaca.png"
-        
-        if self.caminho_imagem:
-            imagem_original = pygame.image.load(self.imagem_path).convert_alpha()
-            self.image = pygame.transform.scale(imagem_original, (self.width, self.height))
-        else:
-            # --- Placeholder Visual (Amarelo Brilhante) ---
-            self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-            self.image.fill((0, 0, 0, 0))
-            rect_interno = self.image.get_rect()
-            pygame.draw.rect(self.image, (255, 255, 0), rect_interno)
-            pygame.draw.rect(self.image, (0, 0, 0), rect_interno, 3)
+        self.imagem_original = pygame.image.load(self.imagem_path).convert_alpha()
+        self.image = pygame.transform.scale(self.imagem_original, (self.width, self.height))
 
         # --- Fim Placeholder ---
         self.rect = self.image.get_rect(midbottom=(x, y))
@@ -1334,17 +1325,9 @@ class FallingProjectile(pygame.sprite.Sprite):
 
         # --- Aparência (similar ao BossProjectile ou customizada) ---
         self.size = 25 # Tamanho do projétil
-        self.caminho_imagem = None
-        # --- Se uma imagem for fornecida ---
-        if self.caminho_imagem:
-            imagem_original = pygame.image.load(self.caminho_imagem).convert_alpha()
-            self.image = pygame.transform.scale(imagem_original, (self.size, self.size))
-        else:
-            # --- Placeholder visual se imagem não for passada ---
-            self.image = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
-            pygame.draw.circle(self.image, (55, 55, 55), (self.size//2, self.size//2), self.size//2)
-            pygame.draw.circle(self.image, (0, 0, 0), (self.size//2, self.size//2), self.size//2, 2)
-        # --- Fim Aparência ---
+        self.caminho_imagem = "img/sala_boss/estaca.png"
+        self.imagem_original = pygame.image.load(self.caminho_imagem).convert_alpha()
+        self.image = pygame.transform.scale(self.imagem_original, (self.size, self.size*4))
 
         # Posição inicial: x aleatório, y fixo acima da tela
         self.rect = self.image.get_rect(centerx=x, top=y_start) # Começa pelo topo
@@ -1413,8 +1396,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.projectile_attack_animation_duration = 1000
         self.projectiles_group = pygame.sprite.Group()
 
-        self.melee_range = 150; self.melee_hitbox_width = 150
-        self.melee_hitbox_height = 100; self.melee_hitbox_offset_x = 40
+        self.melee_range = 150; 
         self.melee_dano = 2; self.is_melee_active = False; self.melee_attack_duration = 600
 
                 # <<< ADICIONADO: Atributos para Fase 2 e Dash >>>
@@ -1427,6 +1409,17 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.dash_dano = 1             # Dano de contato do dash
         self.can_dash_damage = False 
         self.dash_phase = 0
+        
+        # EFEITOS
+        self.efeito_frames = []
+        self.efeito_index = 0
+        self.efeito_timer = 0
+        self.efeito_speed = 4 # ajuste como quiser
+        self.zoom_level = 1.0  # zoom da câmera (ajuste conforme o jogo)
+        self.load_efeito()
+        
+        # PIXEL
+        self.mask = pygame.mask.from_surface(self.image)
 
     # --- _create_placeholder (sem mudanças) ---
     def _create_placeholder(self, color, size=(370, 300)):
@@ -1475,6 +1468,9 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
                 self.frame_index = 0; self.animation_timer = 0
                 base_image = self.frames_atual[0]
                 self.image = pygame.transform.flip(base_image, True, False) if not self.facing_right else base_image
+                
+                self.mask = pygame.mask.from_surface(self.image)
+                
             else:
                 print(f"[BOSS Change] ERRO: '{new_state}' sem frames!")
                 if self.state != BOSS_IDLE and BOSS_IDLE in self.frames and self.frames[BOSS_IDLE]: self.change_state(BOSS_IDLE)
@@ -1493,9 +1489,81 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
             self.frame_index = (self.frame_index + 1) % len(self.frames_atual)
             base_image = self.frames_atual[self.frame_index]
             self.image = pygame.transform.flip(base_image, True, False) if not self.facing_right else base_image
+            
+            self.mask = pygame.mask.from_surface(self.image)
+
 
     # ATAQUE MELEE DO BOSS 
     
+    def load_efeito(self):
+
+        caminho = 'img/sala_boss/efeito_soco.png'
+        frame_width = 570
+        frame_height = 420
+        num_frames = 14
+        # resize = (570, 90)  ""
+
+        sheet = pygame.image.load(caminho).convert_alpha()
+        self.efeito_frames = []  # Limpa qualquer frame anterior
+
+        for i in range(num_frames):
+            frame = sheet.subsurface(pygame.Rect(i * frame_width, 0, frame_width, frame_height))
+            frame = pygame.transform.scale(frame, (880, 669))
+            self.efeito_frames.append(frame)
+
+
+    def desenhar_efeito_melee(self, tela, deslocamento_x, deslocamento_y):
+        if not self.efeito_ativo or not self.efeito_frames:
+            return
+
+        # Avança o frame até o fim da lista
+        self.efeito_timer += 1
+        if self.efeito_timer >= self.efeito_speed:
+            self.efeito_timer = 0
+            self.efeito_index += 1
+            if self.efeito_index >= len(self.efeito_frames):
+                self.efeito_ativo = False
+                return  # Acabou a animação
+
+        # Pega o frame atual
+        frame = self.efeito_frames[self.efeito_index]
+        if not self.facing_right:
+            frame = pygame.transform.flip(frame, True, False)
+
+        scaled_w = int(frame.get_width() * self.zoom_level)
+        scaled_h = int(frame.get_height() * self.zoom_level)
+        frame_scaled = pygame.transform.scale(frame, (scaled_w, scaled_h))
+
+        centro_x = self.rect.centerx + 900
+        centro_y = self.rect.centery + 550
+
+        x_tela = centro_x * self.zoom_level + deslocamento_x - scaled_w // 2
+        y_tela = centro_y * self.zoom_level + deslocamento_y - scaled_h // 2
+
+        tela.blit(frame_scaled, (x_tela, y_tela))
+
+        # # --- COLISÃO PERFEITA COM MÁSCARA ---
+        # efeito_mask = pygame.mask.from_surface(frame_scaled)
+        # efeito_rect_mundo = pygame.Rect(
+        #     centro_x - scaled_w // 2,
+        #     centro_y - scaled_h // 2,
+        #     scaled_w,
+        #     scaled_h
+        # )
+
+        # for inimigo in inimigos:
+        #     if not hasattr(inimigo, "mask") or not inimigo.mask:
+        #         continue
+
+        #     offset = (
+        #         inimigo.rect.left - efeito_rect_mundo.left,
+        #         inimigo.rect.top - efeito_rect_mundo.top
+        #     )
+
+        #     if efeito_mask.overlap(inimigo.mask, offset):
+        #         print(f"[DEBUG] Efeito colidiu com inimigo em {inimigo.rect.topleft}")
+        #         inimigo.receber_dano(2, atacando=True)
+
     
     # FINAL DO ATAQUE DO MELEE 
 
@@ -1679,6 +1747,9 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
             self.change_state(BOSS_CHARGE_PROJECTILE)
         elif self.chosen_attack == 'MELEE':
             self.change_state(BOSS_CHARGE_MELEE)
+            self.efeito_index = 0
+            self.efeito_timer = 0
+            self.efeito_ativo = True
         # <<< ADICIONADO >>>
         elif self.chosen_attack == 'DASH':
             self.change_state(BOSS_CHARGE_DASH)
@@ -1759,12 +1830,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
     # --- handle_melee_attack (sem mudanças) ---
     def handle_melee_attack(self, current_time): pass
 
-    # --- get_melee_hitbox (sem mudanças) ---
-    def get_melee_hitbox(self):
-        if not self.is_melee_active: return None
-        hitbox_x = self.rect.left - self.melee_hitbox_width - self.melee_hitbox_offset_x
-        hitbox_y = self.rect.centery - self.melee_hitbox_height / 2
-        return pygame.Rect(hitbox_x, hitbox_y, self.melee_hitbox_width, self.melee_hitbox_height)
+
 
     # --- receber_dano (sem mudanças) ---
     def receber_dano(self, dano, atacando=False):
@@ -1810,7 +1876,13 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
 
 
     # --- draw (sem mudanças) ---
-    def draw(self, surface): pass 
+    def draw(self, surface): 
+        # if self.boss_instance and self.boss_instance.state == BOSS_ATTACK_MELEE:
+        #     self.boss_instance.desenhar_efeito_melee(
+        #         tela, self.deslocamento_camera_x, self.deslocamento_camera_y, self.inimigos
+        #     )
+        pass
+
 
 # ---------------------------------------------------------------------------------Inimigo_Geleia/Slime - (Rai - Pode reclamar) - Atira
 

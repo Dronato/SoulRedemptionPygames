@@ -978,6 +978,9 @@ class Game:
                     # --- Desenhar Jogo ---
                     # 1. Mapa
                     self.desenhar_mapa_com_zoom()
+                    if self.boss_instance and self.boss_instance.is_melee_active == True:
+                        self.boss_instance.desenhar_efeito_melee(self.tela, self.deslocamento_camera_x, self.deslocamento_camera_y)
+
                     
                     # FUNÇÃO QUE DESENHA O EFEITO DA PLAYER
                     self.jogador.desenhar_efeito_ataque(self.tela, self.deslocamento_camera_x, self.deslocamento_camera_y,self.inimigos)
