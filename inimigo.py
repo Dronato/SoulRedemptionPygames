@@ -38,6 +38,8 @@ INIMIGO1MP2TIRO = "tiro do inimigo 1 do mapa 2"
 INIMIGO3MP2 = "inimigo 3 do mapa 2"
 INIMIGO3MP2IDLE = "enemyidle"
 INIMIGO3MP2ATTACK = "ataque do inimigo 3 do mapa 2"
+INIMIGO3MP2DANO = "inimigo 3 do mapa 2 sofrendo dano"
+INIMIGO3MP2MORTO = "inimigo 3 do mapa 2 morto"
 
 # Geleia/Slime
 INIMIGO2MP2 = "inimigo 2 do mapa 2"
@@ -114,7 +116,9 @@ SPRITES = {
         },
         INIMIGO3MP2:{
             INIMIGO3MP2IDLE:{"file": "img/mapa2/inimigo3/inimigo3mp2_andando.png", "frames": 10, "width": 344, "height": 628},
-            INIMIGO3MP2ATTACK:{"file": "img/mapa2/inimigo3/inimigo3mp2_atacando.png", "frames": 25, "width": 854, "height": 792}
+            INIMIGO3MP2ATTACK:{"file": "img/mapa2/inimigo3/inimigo3mp2_atacando.png", "frames": 25, "width": 854, "height": 792},
+            INIMIGO3MP2DANO:{"file": "img/mapa2/inimigo3/inimigo3mp2_dano.png", "frames": 5, "width": 427, "height": 473},
+            INIMIGO3MP2MORTO:{"file": "img/mapa2/inimigo3/inimigo3mp2_morto.png", "frames": 13, "width": 427, "height": 473}
         }
             },
 
@@ -731,7 +735,7 @@ class Inimigo1mp2(pygame.sprite.Sprite):
 
         # Definir limites da patrulha (sentinela)
         self.x_inicial = x  # Ponto de partida do inimigo
-        self.x_final = x + 300  # Distância máxima para a direita
+        self.x_final = x + 200  # Distância máxima para a direita
         self.patrulhando = True  # Estado de patrulha
         self.offset_y_ataque = 0  # Correção de altura durante ataque
 
@@ -1808,7 +1812,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
     # --- draw (sem mudanças) ---
     def draw(self, surface): pass 
 
-# ---------------------------------------------------------------------------------Inimigo_Geleia/Slime - (Rai - Pode reclamar)
+# ---------------------------------------------------------------------------------Inimigo_Geleia/Slime - (Rai - Pode reclamar) - Atira
 
 class ProjetilGeleia(pygame.sprite.Sprite):
     def __init__(self, x, y, direcao, grupo_jogador, colisao_rects):
@@ -1829,7 +1833,7 @@ class ProjetilGeleia(pygame.sprite.Sprite):
 
         self.image = sprite
         self.rect = self.image.get_rect(center=(x, y))
-        self.vel_x = 6 * direcao
+        self.vel_x = 2 * direcao
         self.dano = 1
         self.grupo_jogador = grupo_jogador
 
@@ -1860,12 +1864,13 @@ class ProjetilGeleia(pygame.sprite.Sprite):
         for rect in self.colisao_rects:
             if self.rect.colliderect(rect):
                 self.kill()
+                print("Projétil destruído por colisão com parede")                
                 return
 
         # Fora da tela
         if self.rect.right < 0 or self.rect.left > LARGURA:
             self.kill()
-
+            print("Projétil fora da tela")
 
 # ---------------------------------------------------------------------------------
 
@@ -1938,7 +1943,7 @@ class Inimigo2mp2(pygame.sprite.Sprite):
         elif self.state == INIMIGO2MP2IDLE:
             velocidade_anim = 4
         else:
-            velocidade_anim = 3
+            velocidade_anim = 4
 
         self.animation_timer += 1
         if self.animation_timer >= velocidade_anim:
@@ -2016,6 +2021,8 @@ class Inimigo2mp2(pygame.sprite.Sprite):
             self.grupo_jogador,
             self.colisao_rects  # <<< adiciona os rects aqui
         )
+        print(f"Projétil criado em: ({proj.rect.x}, {proj.rect.y}) com direção: {direcao}")
+        print("Slime disparou!")
 
         self.grupo_projeteis.add(proj)
 
@@ -2133,6 +2140,179 @@ class Inimigo2mp2(pygame.sprite.Sprite):
             proj_y = proj.rect.y * zoom + deslocamento_y
             surface.blit(proj_image, (proj_x, proj_y))
 
+# ---------------------------------------------------------------------------------Inimigo_Geleia/Slime - (Rai - Pode reclamar) - Não atira
+
+class Inimigo2mp2_1(pygame.sprite.Sprite):
+    def __init__(self, x, y, jogador, colisao_rects, tmx_data, largura_mapa, altura_mapa):
+        super().__init__()
+        self.state = INIMIGO2MP2IDLE
+        self.frame_index = 0
+        self.animation_timer = 0
+        self.facing_right = True
+        self.velocidade_x = 1
+        self.velocidade_y = 0
+        self.gravity = 0.5
+        self.dano = 1
+        self.vida = 3
+        self.morto = False
+
+        self.jogador = jogador
+        self.grupo_jogador = pygame.sprite.GroupSingle(jogador)
+        self.colisao_rects = colisao_rects
+        self.tmx_data = tmx_data
+        self.largura_mapa = largura_mapa
+        self.altura_mapa = altura_mapa
+
+        self.x_inicial = x
+        self.x_final = x + 170
+
+        self.frames = []
+        self.load_sprites()
+        self.image = self.frames[self.frame_index] if self.frames else pygame.Surface((32, 32))
+        self.rect = self.image.get_rect(topleft=(x, y))
+
+    def load_sprites(self):
+        try:
+            sprite_info = SPRITES[MAPA2][INIMIGO2MP2][self.state]
+            self.sprite_sheet = pygame.image.load(sprite_info["file"]).convert_alpha()
+            self.frames = self.load_frames(sprite_info["frames"], sprite_info["width"], sprite_info["height"])
+        except Exception as e:
+            print(f"[Erro sprites]: {e}")
+            self.frames = [pygame.Surface((28, 28))]
+            self.frames[0].fill((255, 0, 0))
+
+    def load_frames(self, frame_count, width, height):
+        frames = []
+        for i in range(frame_count):
+            x = i * width
+            frame = self.sprite_sheet.subsurface(pygame.Rect(x, 0, width, height))
+
+            if self.state == INIMIGO1MP1IDLE:
+                frame = pygame.transform.scale(frame, (28, 28))  # ← maior
+            else:
+                frame = pygame.transform.scale(frame, (40, 40))
+
+            frames.append(frame)
+        return frames
+
+    def update_animation(self):
+        if not self.frames:
+            return
+
+        if self.state == INIMIGO2MP2MORTO:
+            velocidade_anim = 7
+        elif self.state == INIMIGO2MP2IDLE:
+            velocidade_anim = 4
+        else:
+            velocidade_anim = 4
+
+        self.animation_timer += 1
+        if self.animation_timer >= velocidade_anim:
+            if self.state == INIMIGO2MP2MORTO:
+                if self.frame_index < len(self.frames) - 1:
+                    self.frame_index += 1
+            else:
+                self.frame_index = (self.frame_index + 1) % len(self.frames)
+
+            self.animation_timer = 0
+
+        frame = self.frames[self.frame_index]
+        self.image = pygame.transform.flip(frame, True, False) if self.facing_right else frame
+
+    def patrulhar(self):
+        self.state = INIMIGO2MP2IDLE
+        if self.facing_right:
+            self.rect.x += self.velocidade_x
+            if self.rect.right >= self.x_final:
+                self.rect.right = self.x_final
+                self.facing_right = False
+        else:
+            self.rect.x -= self.velocidade_x
+            if self.rect.left <= self.x_inicial:
+                self.rect.left = self.x_inicial
+                self.facing_right = True
+
+    def receber_dano(self, quantidade, atacando=False):
+        self.vida -= quantidade
+
+        if self.vida <= 0:
+            self.vida = 0
+            self.state = INIMIGO2MP2MORTO
+            self.frame_index = 0
+            self.load_sprites()
+            return
+
+        self.state = INIMIGO2MP2DANO
+        self.frame_index = 0
+        self.load_sprites()
+
+    def update(self):
+        if self.state == INIMIGO2MP2DANO:
+            self.update_animation()
+            if self.frame_index == len(self.frames) - 1:
+                self.state = INIMIGO2MP2IDLE
+                self.load_sprites()
+                self.frame_index = 0
+            return
+
+        if self.vida <= 0:
+            if self.state == INIMIGO2MP2MORTO:
+                self.update_animation()
+                if self.frame_index == len(self.frames) - 1:
+                    self.kill()
+            return
+
+        distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
+        alinhado = abs(self.rect.centery - self.jogador.rect.centery) < 40
+        mesma_direcao = (
+            (self.facing_right and self.jogador.rect.centerx > self.rect.centerx) or
+            (not self.facing_right and self.jogador.rect.centerx < self.rect.centerx)
+        )
+
+        # Remover a verificação da linha de visão
+        if distancia < 250 and alinhado:
+            self.patrulhar()
+        else:
+            self.patrulhar()
+
+        self.velocidade_y += self.gravity
+        self.rect.y += self.velocidade_y
+        colidiu = self.colisao_vertical()
+        if colidiu:
+            if self.velocidade_y > 0:
+                self.rect.bottom = colidiu.top
+            elif self.velocidade_y < 0:
+                self.rect.top = colidiu.bottom
+            self.velocidade_y = 0
+
+        self.update_animation()
+
+
+    def colisao_vertical(self):
+        for rect in self.colisao_rects:
+            if self.rect.colliderect(rect):
+                return rect
+        return None
+
+    def draw(self, surface, zoom=1.0, deslocamento_x=0, deslocamento_y=0):
+        scaled_image = pygame.transform.scale(
+            self.image,
+            (
+                int(self.image.get_width() * zoom),
+                int(self.image.get_height() * zoom)
+            )
+        )
+
+        pos_x = self.rect.x * zoom + deslocamento_x
+        if self.state == INIMIGO2MP2ATTACK:
+            offset_y = -8
+        elif self.state == INIMIGO2MP2DANO:
+            offset_y = -12
+        else:
+            offset_y = 0
+
+        pos_y = (self.rect.y + offset_y) * zoom + deslocamento_y
+        surface.blit(scaled_image, (pos_x, pos_y))
 
 
 # ---------------------------------------------------------------------------------------------Inimigo_Dragão - (Rai - Pode reclamar)
@@ -2158,7 +2338,7 @@ class Inimigo3mp2(pygame.sprite.Sprite):
         self.largura_mapa = largura_mapa
         self.altura_mapa = altura_mapa
 
-        self.vida = 5
+        self.vida = 80
 
         self.sprites_por_estado = {}
         self.sprites_flip_por_estado = {}
@@ -2197,9 +2377,9 @@ class Inimigo3mp2(pygame.sprite.Sprite):
             x = i * width
             frame = sprite_sheet.subsurface(pygame.Rect(x, 0, width, height))
             if self.state == INIMIGO3MP2ATTACK:
-                frame = pygame.transform.scale(frame, (50, 50))
+                frame = pygame.transform.scale(frame, (80, 80))
             else:
-                frame = pygame.transform.scale(frame, (70, 70))
+                frame = pygame.transform.scale(frame, (50, 50))
             frames.append(frame)
         return frames
 
@@ -2207,38 +2387,61 @@ class Inimigo3mp2(pygame.sprite.Sprite):
         if not self.frames:
             return
 
-        velocidade_anim = 6 if self.state == INIMIGO3MP2ATTACK else 10
+        if self.state == INIMIGO3MP2DANO:
+            velocidade_anim = 5
+        elif self.state == INIMIGO3MP2MORTO:
+            velocidade_anim = 3
+        else:
+            velocidade_anim = 6 if self.state == INIMIGO3MP2ATTACK else 10
 
         self.animation_timer += 1
         if self.animation_timer >= velocidade_anim:
             self.frame_index += 1
             self.animation_timer = 0
 
-            if self.state == INIMIGO3MP2ATTACK:
-                if self.frame_index >= len(self.frames):
+
+            if self.frame_index >= len(self.frames):
+                if self.state == INIMIGO3MP2MORTO:
+                    self.kill()
+                    return
+                elif self.state == INIMIGO3MP2DANO:
+                    self.mudar_estado(INIMIGO3MP2IDLE)
+                    return
+                elif self.state == INIMIGO3MP2ATTACK:
                     self.mudar_estado(INIMIGO3MP2IDLE)
                     self.atacando = False
                     return
-            else:
                 self.frame_index %= len(self.frames)
 
         frame = self.frames[self.frame_index]
         self.image = frame if self.facing_right else self.frames_flip[self.frame_index]
         if self.state == INIMIGO3MP2ATTACK:
-            self.image = pygame.transform.scale(self.image, (95, 95))
+            self.image = pygame.transform.scale(self.image, (90, 90))
+        elif self.state == INIMIGO3MP2DANO:
+            self.image = pygame.transform.scale(self.image, (65, 65))
+
         old_center = self.rect.center
         self.rect = self.image.get_rect()
         self.rect.center = old_center
         self.mask = pygame.mask.from_surface(self.image)
 
+
     def receber_dano(self, dano, atacando=False):
+        if self.morto:
+            return  # já morreu, ignora dano
         if atacando:
             self.vida -= dano
+            self.rect.y += 7  # <- Desce um pouco
             if self.vida <= 0:
                 self.morrer()
+            else:
+                self.mudar_estado(INIMIGO3MP2DANO)
 
     def morrer(self):
-        self.kill()
+        self.mudar_estado(INIMIGO3MP2MORTO)
+        self.morto = True
+        self.frame_index = 0
+        self.animation_timer = 0
 
     def colisao_vertical(self):
         for rect in self.colisao_rects:
