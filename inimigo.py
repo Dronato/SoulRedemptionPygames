@@ -727,7 +727,7 @@ class Inimigo1mp2(pygame.sprite.Sprite):
         self.altura_mapa = altura_mapa
 
 
-        self.vida = 10  # Vida do inimigo
+        self.vida = 50  # Vida do inimigo
 
         # Carregar sprites
         self.frames = []

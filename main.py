@@ -506,7 +506,7 @@ class Game:
             except NameError: print("ERRO: Classes NPC não encontradas.")
             except Exception as e: print(f"Erro criando NPCs (Mapa.tmx): {e}")
             try: # Inimigos
-                inimigo1 = Inimigo1mp1(x=590, y=0, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
+                inimigo1 = Inimigo1mp1(x=590, y=220, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
                 inimigo2 = Inimigo1mp2(x=2050, y=214, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
                 inimigo3 = Inimigo1mp1(x=1500, y=0, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)            
                 inimigo4 = Inimigo1mp1(x=3050, y=0, jogador=self.jogador, colisao_rects=self.colisao_rects, tmx_data=self.tmx_data, largura_mapa=self.largura_mapa, altura_mapa=self.altura_mapa_real)
