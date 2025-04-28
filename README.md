@@ -6,9 +6,18 @@
 
 <img src="telaInicial.png" alt="Exemplo imagem">
 
-## 📜 Descrição
+## 📜 Descrição do Jogo
 
-"SoulRedemptionPygames" é um roguelike dinâmico e divertido onde você acorda em um local misterioso, sem memórias claras. A cada exploração, você desvenda fragmentos do seu passado, desbloqueia novas habilidades poderosas e enfrenta desafios cada vez mais complexos. Prepare-se para uma jornada imprevisível, onde cada partida é única!
+Em **Soul Redemption**, você embarca em uma jornada intensa através das emoções humanas mais profundas, enfrentando seus próprios medos, raiva e culpa.
+
+- **O Medo:** Você desperta em uma floresta escura e desconhecida, desorientado e sem memórias. Criaturas hostis surgem das sombras enquanto você luta para entender onde está e como sobreviver.
+
+- **A Raiva:** Conforme fragmentos do seu passado vêm à tona, a raiva toma conta. O cenário se torna mais agressivo, refletindo batalhas intensas e uma fúria crescente, onde cada inimigo vencido representa uma pequena vitória contra a dor interior.
+
+- **A Culpa:** No capítulo final da jornada, você encara seus próprios arrependimentos em um ambiente sombrio e carregado de tensão emocional. O desafio não é apenas físico, mas também psicológico: enfrentar a si mesmo.
+
+Cada fase de **Soul Redemption** representa uma luta emocional única, tornando cada partida uma experiência profunda e inesquecível. Explore, lute e descubra a verdade para conquistar a sua redenção.
+
 
 ## ✨ Principais Características
 
@@ -20,16 +29,30 @@
 * **Visual Pixel Art:** Desfrute de um estilo visual nostálgico e charmoso, criado com Pixilart.
 * **Interface Intuitiva:** Desenvolvida com foco na experiência do jogador, utilizando princípios de design definidos no Figma.
 
-  ## 🛠️ Ferramentas e Bibliotecas Utilizadas
+## 🛠️ Ferramentas e Bibliotecas Utilizadas
 
 * **Python:** Linguagem de programação principal.
 * **Pygame:** Biblioteca para criação de jogos 2D em Python.
+* **Tiled:** Editor de mapas 2D utilizado para criação e organização dos cenários do jogo.
 * **sys:** Biblioteca padrão do Python para funcionalidades do sistema.
 * **Pixilart:** Ferramenta online para criação de gráficos em pixel art.
 * **Figma:** Ferramenta de design de interface do usuário (UI) e prototipagem.
 * **Pinterest:** Plataforma para inspiração visual e coleta de referências.
 * **ImgTools:** Ferramenta para manipulação e conversão de imagens.
 * **Canva:** Ferramenta de design gráfico para criar materiais de divulgação e outros recursos visuais.
+
+## 🧪 Metodologia
+As principais etapas do processo foram:
+
+* **Planejamento Inicial:** Definição da ideia central, escopo inicial do projeto e escolha das ferramentas de desenvolvimento e design.
+* **Prototipação:** Criação de versões básicas das mecânicas principais, como movimentação, combate e interação com o ambiente.
+* **Design de Mapas:** Utilização do Tiled para construir cenários variados e dinâmicos, otimizados para a jogabilidade.
+* **Desenvolvimento Visual:** Criação dos personagens, inimigos, cenários e interfaces em pixel art com o auxílio do Pixilart e Figma.
+* **Organização e Acompanhamento:** Utilização da metodologia Kanban para registrar, acompanhar e organizar todas as tarefas do projeto.
+* **Testes Iterativos:** Testes constantes de jogabilidade, correção de bugs e balanceamento de dificuldade, visando melhorar a experiência do usuário.
+* **Refinamento Final:** Integração de cutscenes, efeitos sonoros, trilhas musicais e ajustes finais de polimento no jogo.
+
+Essa abordagem permitiu flexibilidade nas entregas, foco na qualidade da experiência do jogador e uma gestão de tempo mais eficiente.
 
 ## 🚀 Começando
 
