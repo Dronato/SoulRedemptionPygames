@@ -648,14 +648,41 @@ class Game:
 
 
 
-    def tocar_cutscene(self, caminho_cutscene="cutscenes/Cutscene 01.mp4", caminho_audio="cutscenes/Cutscene-01.mp3"):
-            import cv2
-            # Carrega e toca o áudio com pygame.mixer
-            pygame.mixer.music.load(caminho_audio)
-            pygame.mixer.music.play()
+    def tocar_cutscene(self, caminho_cutscene="cutscenes/cutscene 03.mp4", caminho_audio="cutscenes/cutscene 03.mp3"):
+            clock = pygame.time.Clock()
+
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+
+            if caminho_audio and os.path.exists(caminho_audio):
+                pygame.mixer.music.load(caminho_audio)
+                pygame.mixer.music.set_volume(0.7)
+                pygame.mixer.music.play()
+            else:
+                print("Aviso: Áudio da cutscene não encontrado.")
 
             cap = cv2.VideoCapture(caminho_cutscene)
-            while cap.isOpened():
+            if not cap.isOpened():
+                print(f"Erro ao abrir o vídeo: {caminho_cutscene}")
+                return
+
+            video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            video_fps = cap.get(cv2.CAP_PROP_FPS) or 30
+
+            # Usar tela já existente no self
+            tela = self.tela
+
+            # Fonte arcade personalizada (ou alternativa)
+            arcade_font_path = os.path.join(os.path.dirname(__file__), "ARCADE_N.ttf")
+            if os.path.exists(arcade_font_path):
+                font = pygame.font.Font(arcade_font_path, 16)
+            else:
+                print("Fonte 'ARCADE_N.ttf' não encontrada, usando fonte pixelada padrão.")
+                font = pygame.font.SysFont("Courier New", 16, bold=True)
+
+            skip = False
+            while cap.isOpened() and not skip:
                 ret, frame = cap.read()
                 if not ret:
                     break
@@ -663,22 +690,28 @@ class Game:
                 frame = cv2.resize(frame, (self.LARGURA, self.ALTURA))
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 surface = pygame.surfarray.make_surface(frame_rgb.swapaxes(0, 1))
-                self.tela.blit(surface, (0, 0))
-                pygame.display.update()
+                tela.blit(surface, (0, 0))
+
+                # Texto "aperte enter para pular"
+                text_surface = font.render("aperte enter para pular", True, (255, 255, 255))
+                text_rect = text_surface.get_rect(topright=(self.LARGURA - 20, 20))
+                tela.blit(text_surface, text_rect)
+
+                pygame.display.flip()
 
                 for evento in pygame.event.get():
                     if evento.type == pygame.QUIT:
+                        cap.release()
                         pygame.quit()
                         sys.exit()
-                    elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_RETURN:
-                        pygame.mixer.music.stop()  # Para o som se pular
-                        cap.release()
-                        return
+                    elif evento.type == pygame.KEYDOWN and evento.key in [pygame.K_RETURN, pygame.K_ESCAPE, pygame.K_SPACE]:
+                        skip = True
+                        break
 
-                pygame.time.delay(30)  # Ajuste para o fps do vídeo (~30fps)
+                clock.tick(video_fps)
 
             cap.release()
-            pygame.mixer.music.stop()  # Garante que o som pare ao fim da cutscene
+            pygame.mixer.music.stop()
     # ==================== LOOP PRINCIPAL ====================
     def run(self):
         """Loop principal do jogo."""
@@ -774,20 +807,19 @@ class Game:
                                  if self.mapa_atual_path == "Mapa.tmx":
                                      mapa_a_carregar = "Mapa(2).tmx"
                                      pygame.mixer.music.stop()  # Para música do mapa
-                                     self.tocar_cutscene("cutscenes/Cutscene 01.mp4", "cutscenes/Cutscene-01.mp3")
+                                     self.tocar_cutscene("cutscenes/Cutscene 02.mp4", "cutscenes/Cutscene 02.mp3")
                                  elif self.mapa_atual_path == "Mapa(2).tmx":
                                     pygame.mixer.music.stop()  # Para música do mapa
-                                    self.tocar_cutscene("cutscenes/Cutscene 01.mp4", "cutscenes/Cutscene-01.mp3")
+                                    self.tocar_cutscene("cutscenes/cutscene 03.mp4", "cutscenes/cutscene 03.mp3")
                                     mapa_a_carregar = "SalaBoss.tmx"
                                  elif self.mapa_atual_path == "SalaBoss.tmx":
                                      if self.boss_instance: self.boss_instance.update_animation()
                                      # Só sai da sala do boss se ele foi derrotado?
                                      if not self.boss_instance or self.boss_instance.is_dead:
                                          print("DEBUG: Saindo da Sala Boss -> Créditos/Menu")
-                                        # AQUI VOCÊ DECIDE: ir para créditos, menu ou cutscene final
-                                         self.exibir_mensagem_final("VOCÊ VENCEU!", self.AMARELO) # Mostra vitória antes
+                                         pygame.mixer.music.stop()  # Para música do mapa
+                                         self.tocar_cutscene("cutscenes/fim da jornada.mp4", "cutscenes/fim da jornada.mp3")
                                          self.game_state = "MENU" # Exemplo: volta ao menu
-                                         pygame.mixer.music.stop()
                                          break
                                      else:
                                          self.exibir_popup("Derrote o chefe primeiro!")
@@ -928,15 +960,6 @@ class Game:
                              print(f"    [COLLISION] Vida depois: {self.jogador.vida_atual}. can_dash_damage = False") # DEBUG
                                  # Adicionar efeito sonoro/visual de impacto e talvez empurrar o jogador
 
-                    #   d) Jogador vs Melee do Boss
-                    if self.boss_instance and self.boss_instance.is_melee_active and self.jogador:
-                         melee_hitbox = self.boss_instance.get_melee_hitbox()
-                         if melee_hitbox and self.jogador.collision_rect.colliderect(melee_hitbox):
-                              # Aplicar dano apenas uma vez por ativação do melee
-                              # (Pode precisar de um timer ou flag no jogador pós-hit)
-                              self.jogador.receber_dano(self.boss_instance.melee_dano)
-                              # Empurrar jogador?
-
                     # --- Checar Derrota ---
                     if self.jogador and self.jogador.vida_atual <= 0:
                         pygame.mixer.music.stop(); self.musica_atual = None
@@ -951,7 +974,8 @@ class Game:
                          if tempo_agora - self.boss_instance.last_attack_time > 2000: # Reusa last_attack_time como tempo da morte
                               if self.jogador and self.jogador.vida_atual > 0: # Só vence se vivo
                                    pygame.mixer.music.stop(); self.musica_atual = None
-                                   self.exibir_mensagem_final("VOCÊ VENCEU!", self.AMARELO)
+                                   pygame.mixer.music.stop()  # Para música do mapa
+                                   self.tocar_cutscene("cutscenes/fim da jornada.mp4", "cutscenes/fim da jornada.mp3")
                                    self.game_state = "MENU" # Ou CREDITS
                                    continue
 
@@ -1009,17 +1033,6 @@ class Game:
                                                 self.tela.blit(img_scaled, sprite_rect_tela.topleft)
                                 except: pass # Ignora erros de desenho
                                 
-                            if isinstance(sprite, BossFinal):
-                              if sprite.is_melee_active:
-                                   melee_box_mundo = sprite.get_melee_hitbox()
-                                   if melee_box_mundo:
-                                       # Converter para coordenadas da tela
-                                       box_x_tela = melee_box_mundo.x * self.zoom_level + self.deslocamento_camera_x
-                                       box_y_tela = melee_box_mundo.y * self.zoom_level + self.deslocamento_camera_y
-                                       box_w_tela = melee_box_mundo.width * self.zoom_level
-                                       box_h_tela = melee_box_mundo.height * self.zoom_level
-                                       debug_rect_tela = pygame.Rect(box_x_tela, box_y_tela, box_w_tela, box_h_tela)
-                                       pygame.draw.rect(self.tela, (255, 0, 0, 100), debug_rect_tela, 2) # Vermelho semi-transparente
 
                     for inimigo_atual in self.inimigos:
                         if isinstance(inimigo_atual, Inimigo1mp2) and callable(inimigo_atual.update):
@@ -1062,7 +1075,7 @@ class Game:
                          pygame.draw.rect(self.tela, self.BRANCO, bg_rect, 2) # Borda
 
                          # Nome do Boss (opcional)
-                         self.draw_text("CHEFE FINAL", 20, self.LARGURA / 2, bar_y - 15, self.BRANCO, center=True)         
+                         self.draw_text("A CULPA", 20, self.LARGURA / 2, bar_y - 15, self.BRANCO, center=True)         
                     # 4. Interface de Conversa (se ativa)
                     if self.em_conversa: self.exibir_conversa()
 
