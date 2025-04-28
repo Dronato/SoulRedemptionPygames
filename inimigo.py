@@ -143,7 +143,6 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         self.dano = 1
 
         self.tempo_ataque_inicio = 0
-        self.cooldown_ataque = 700  # em milissegundos (ex: 1 segundo)
         self.preparando_ataque = False
 
 
@@ -154,6 +153,9 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         self.largura_mapa = largura_mapa
         self.altura_mapa = altura_mapa
 
+        self.ultimo_ataque = 0
+        self.cooldown_ataque = 2000
+
         self.sofrendo_dano = False
         self.dano_recebido = 0
         self.vida = 4 # Vida do inimigo
@@ -161,6 +163,12 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         # Carregar sprites
         self.frames = []
         self.load_sprites()
+
+        self.knockback = False
+        self.forca_knockback = 3  # quão forte ele vai ser empurrado
+        self.direcao_knockback = 0  # -1 para esquerda, +1 para direita
+        self.tempo_knockback = 250  # duração do knockback em ms
+        self.inicio_knockback = 0  # quando começou o knockback
 
         # Definir limites da patrulha (sentinela)
         self.x_inicial = x  # Ponto de partida do inimigo
@@ -204,15 +212,27 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         return frames
     
     def receber_dano(self, dano, atacando=False):
-        """Método para diminuir a vida do inimigo quando receber dano."""
-        if atacando and not self.sofrendo_dano:
-            self.state = INIMIGO1MP1DANO
-            self.load_sprites()
-            self.index_anim = 0
-            self.sofrendo_dano = True
-            self.tempo_entre_frames = 100  # ou o valor que preferir
-            self.ultimo_frame = pygame.time.get_ticks()
-            self.dano_recebido = dano
+        """Diminui a vida do inimigo ao receber dano."""
+        if atacando and not self.sofrendo_dano and not self.morto:
+            self.vida -= dano  # <<< AQUI: tirar vida
+
+            if self.vida <= 0:
+                self.morrer()
+            else:
+                self.state = INIMIGO1MP1DANO
+                self.load_sprites()
+                self.index_anim = 0
+                self.sofrendo_dano = True
+                self.tempo_entre_frames = 400
+                self.ultimo_frame = pygame.time.get_ticks()
+
+                            # Ativar knockback
+                self.knockback = True
+                self.inicio_knockback = pygame.time.get_ticks()
+                if self.jogador.rect.centerx > self.rect.centerx:
+                    self.direcao_knockback = -1  # inimigo é empurrado para esquerda
+                else:
+                    self.direcao_knockback = 1  # inimigo é empurrado para direita
 
     def morrer(self):
         self.dano = 0
@@ -258,6 +278,11 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         """Atualiza a animação do inimigo."""
         if self.state == INIMIGO1MP1MORTO:
             return  # Se o inimigo estiver morto, não atualiza nada
+        
+        if self.state == INIMIGO1MP1ATTACK:
+            if self.frame_index >= len(self.frames):
+                self.atacando = False
+                self.mudar_estado(INIMIGO1MP1IDLE)
 
         if not self.frames:
             return  # Evita erro se não houver frames
@@ -310,17 +335,15 @@ class Inimigo1mp1(pygame.sprite.Sprite):
 
     def atacar(self):
         """Método para iniciar o ataque com animação."""
-        distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
-        
-        if not self.atacando:
-            self.atacando = True
-            self.patrulhando = False
-            self.mudar_estado(INIMIGO1MP1ATTACK)
-            self.frame_index = 0
-            self.animation_timer = 0
+        self.atacando = True
+        self.patrulhando = False
+        self.mudar_estado(INIMIGO1MP1ATTACK)
+        self.frame_index = 0
+        self.animation_timer = 0
+        self.ultimo_ataque = pygame.time.get_ticks()
 
     def perseguir(self):
-        self.atacando = False
+        
         self.mudar_estado(INIMIGO1MP1IDLE)
         """Função de perseguição do inimigo."""
         if self.jogador.rect.centerx > self.rect.centerx:
@@ -334,28 +357,51 @@ class Inimigo1mp1(pygame.sprite.Sprite):
 
     def update(self):
 
+        agora = pygame.time.get_ticks()
+        if self.knockback:
+            self.rect.x += self.direcao_knockback * self.forca_knockback
+
+            if agora - self.inicio_knockback > self.tempo_knockback:
+                self.knockback = False  # termina o knockback
+
+        # Se estiver morto, só atualiza morte
         if self.state == INIMIGO1MP1MORTO:
-            self.dano = 0
             self.morrer()
-            return  # Sai da função para não atualizar nada
-        
-        distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
-        distanciab = abs(self.x_final - self.x_inicial)
+            return
 
-        if distancia >= distanciab:
-            self.patrulhando = True
-            self.atacando = False
-            self.mudar_estado(INIMIGO1MP1IDLE)
-            self.patrulhar()
-        else:
-            if not self.atacando:
-                self.patrulhando = False
+        # Se estava sofrendo dano e terminou a animação
+        if self.state == INIMIGO1MP1DANO:
+            if self.frame_index >= len(self.frames) - 1:
+                self.sofrendo_dano = False
+                self.frame_index = 0
                 self.mudar_estado(INIMIGO1MP1IDLE)
-                self.perseguir()
 
-                # Verifica distância para iniciar ataque
-                if distancia <= 20:
+        # Se estava atacando e terminou a animação
+        if self.state == INIMIGO1MP1ATTACK:
+            if self.frame_index >= len(self.frames) - 1:
+                self.atacando = False
+                self.frame_index = 0
+                self.mudar_estado(INIMIGO1MP1IDLE)
+
+        # Se está normal (idle ou andando)
+        if self.state == INIMIGO1MP1IDLE:
+
+            distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
+            distanciab = abs(self.x_final - self.x_inicial)
+
+            if distancia >= distanciab:
+                # Longe: patrulhar
+                self.patrulhando = True
+                self.atacando = False
+                self.patrulhar()
+            else:
+                # Perto
+                if distancia <= 20 and (agora - self.ultimo_ataque >= self.cooldown_ataque):
+                    # Perto o bastante para atacar e cooldown passou
                     self.atacar()
+                else:
+                    # Se não atacou, persegue
+                    self.perseguir()
 
 
     # Aplicar gravidade
@@ -410,6 +456,11 @@ class Inimigo1mp1(pygame.sprite.Sprite):
                     self.vida -= self.dano_recebido
                     if self.vida <= 0:
                         self.morto = True
+                        self.velocidade_x = 0
+                        self.velocidade_y = 0
+                        self.atacando = False
+                        self.patrulhando = False
+                        
                         self.morrer()
                         
         self.hitbox.x = self.rect.x + 10
