@@ -17,6 +17,8 @@ DASH = 'dash'
 ATTACK1 = 'attack1'
 ATTACK2 = 'attack2'
 ATTACK3 = 'attack3'
+DANOWALK = "Levando dano enquanto anda"
+DANOIDLE = "Levando dano enquanto está parada"
 INIMIGOIDLE = "enemyidle" # Definido mas não usado na classe Jogador?
 SPRITES = {
     # INIMIGOIDLE:{"file": "img/mapa1/inimigo1/inimigo1_andando.png", "frames": 3, "width":445 , "height": 394}, # Mover para inimigo.py se for do inimigo
@@ -28,6 +30,8 @@ SPRITES = {
     ATTACK1: {"file": "img/prota/attack1.png", "frames": 6, "width": 108, "height": 81},
     ATTACK2: {"file": "img/prota/attack2.png", "frames": 7, "width": 108, "height": 126},
     ATTACK3: {"file": "img/prota/attack3.png", "frames": 8, "width": 108, "height": 90},   
+    DANOWALK: {"file": "img/prota/danoandando.png", "frames": 10, "width": 198, "height": 144},
+    DANOIDLE: {"file": "img/prota/danoparada.png", "frames": 6, "width": 176, "height": 148},
 }
 
 EFFECTS = {
@@ -243,6 +247,17 @@ class Jogador(pygame.sprite.Sprite):
 
     def receber_dano(self, dano):
         tempo_atual = pygame.time.get_ticks()
+
+        # Troca para animação dela levando dano enquanto esta parada e enquanto ela esta andando
+        if self.state == IDLE:
+            self.state = DANOIDLE
+            self.load_sprites()
+            self.frame_index = 0
+        elif self.state == WALK:
+            self.state = DANOWALK
+            self.load_sprites()
+            self.frame_index = 0
+
         # Simplificar condição: só recebe dano se não estiver invulnerável
         if not self.invulneravel:
             self.vida_atual -= dano
@@ -456,7 +471,7 @@ class Jogador(pygame.sprite.Sprite):
 
 
             # Atualizar Estado (se mudou e não está atacando/dando dash)
-            if current_state != self.state and not self.is_attacking and not self.dash_ativo:
+            if current_state != self.state and not self.is_attacking and not self.dash_ativo and not (self.state == DANOIDLE or self.state == DANOWALK):
                  # Adicionar verificação para estado de pulo/queda aqui se necessário
                 if not self.no_chao:
                     # Se está no ar, manter o estado atual (pulo/queda), não trocar para outro
@@ -530,6 +545,11 @@ class Jogador(pygame.sprite.Sprite):
         # Atualizar estado de invulnerabilidade
         if self.invulneravel and tempo_atual - self.ultimo_dano > self.tempo_invulneravel:
             self.invulneravel = False
+            # Se estava mostrando animação de dano, voltar para idle ou walk
+            if self.state == DANOIDLE or self.state == DANOWALK:
+                self.state = IDLE
+                self.load_sprites()
+
             # print("Jogador não está mais invulnerável")
 
 
