@@ -4,6 +4,7 @@ import os
 import webbrowser
 
 # --- Função para tocar a cutscene com texto "PULAR" ---
+
 def play_cutscene(video_path, tela, audio_path=None):
     clock = pygame.time.Clock()
 
@@ -81,7 +82,15 @@ except:
     fundo_creditos_surf = None
 
 # --- CLASSES DE MENU ---
-
+cutscene_ja_tocou = 1
+if cutscene_ja_tocou == 1:
+    pygame.mixer.music.stop()
+    pygame.mixer.music.pause()
+    video_path = os.path.join(script_dir, "cutscenes", "Cutscene 01.mp4")
+    audio_path = os.path.join(script_dir, "cutscenes", "Cutscene-01.mp3")
+    play_cutscene(video_path, audio_path)
+    pygame.mixer.music.unpause()
+    cutscene_ja_tocou = 2
 class Menu():
     def __init__(self, main_game_instance):
         pygame.mixer.init()
