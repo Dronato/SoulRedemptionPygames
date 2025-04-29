@@ -404,7 +404,25 @@ class Inimigo1mp1(pygame.sprite.Sprite):
             if self.frame_index >= len(self.frames) - 1:
                 self.atacando = False
                 self.frame_index = 0
-                self.mudar_estado(INIMIGO1MP1IDLE)
+                self.mudar_estado(INIMIGO1MP1PARADO)
+
+        if self.state == INIMIGO1MP1PARADO:
+            distancia = abs(self.rect.centerx - self.jogador.rect.centerx)
+            distanciab = abs(self.x_final - self.x_inicial)
+
+            if not (self.x_inicial <= self.jogador.rect.centerx <= self.x_final):
+                # Está longe → voltar a patrulhar se houver chão
+                if self.tem_chao_a_frente(1 if self.facing_right else -1):
+                    self.patrulhando = True
+                    self.mudar_estado(INIMIGO1MP1IDLE)
+            else:
+                # Está perto → tentar perseguir de novo
+                if self.jogador.rect.centerx > self.rect.centerx and self.tem_chao_a_frente(1):
+                    self.facing_right = True
+                    self.mudar_estado(INIMIGO1MP1IDLE)
+                elif self.jogador.rect.centerx < self.rect.centerx and self.tem_chao_a_frente(-1):
+                    self.facing_right = False
+                    self.mudar_estado(INIMIGO1MP1IDLE)
 
         # Se está normal (idle ou andando)
         if self.state == INIMIGO1MP1IDLE:
@@ -419,8 +437,12 @@ class Inimigo1mp1(pygame.sprite.Sprite):
                 self.patrulhar()
             else:
                 # Perto
-                if distancia <= 20 and (agora - self.ultimo_ataque >= self.cooldown_ataque):
-                    # Perto o bastante para atacar e cooldown passou
+                if (
+                    distancia <= 20 and
+                    abs(self.rect.centery - self.jogador.rect.centery) < 25 and  # <<< nova linha
+                    (agora - self.ultimo_ataque >= self.cooldown_ataque)
+                ):
+
                     self.atacar()
                 else:
                     # Se não atacou, persegue
