@@ -18,6 +18,7 @@ ATTACK = "attack"
 
 MAPA1 = "inimigos do mapa 1"
 INIMIGO1MP1 = "inimigo 1 do mapa 1"
+INIMIGO1MP1PARADO = "inimigo 1 mapa 1 parado"
 INIMIGO1MP1IDLE = "enemyidle"
 INIMIGO1MP1ATTACK = "ataque do inimigo 1"
 INIMIGO1MP1DANO = "inimigo 1 do mapa 1 sofrendo dano"
@@ -91,6 +92,7 @@ SPRITES = {
     },
     MAPA1:{
         INIMIGO1MP1:{
+            INIMIGO1MP1PARADO:{"file": "img/mapa1/inimigo1/inimigo1mp1_parado.png", "frames": 3, "width": 445, "height": 389},
             INIMIGO1MP1IDLE:{"file": "img/mapa1/inimigo1/inimigo1_andando.png", "frames": 4, "width": 445, "height": 389},
             INIMIGO1MP1ATTACK:{"file": "img/mapa1/inimigo1/inimigo1mp1_ataque.png", "frames": 12, "width": 445, "height": 389},
             INIMIGO1MP1DANO:{"file": "img/mapa1/inimigo1/inimigo1mp1_dano.png", "frames": 10, "width": 445, "height": 389},
@@ -311,26 +313,44 @@ class Inimigo1mp1(pygame.sprite.Sprite):
             if not self.facing_right:
                 self.image = self.frames[self.frame_index]
 
+    def tem_chao_a_frente(self, direcao):
+        margem = 5
+        if direcao == 1:
+            ponto_checagem = (self.rect.right + margem, self.rect.bottom + 1)
+        else:
+            ponto_checagem = (self.rect.left - margem, self.rect.bottom + 1)
+
+        for rect in self.colisao_rects:
+            if rect.collidepoint(ponto_checagem):
+                return True
+        return False
+
     def patrulhar(self):
         if self.patrulhando:
             self.atacando = False
             self.mudar_estado(INIMIGO1MP1IDLE)
-        # Movimento de patrulha entre os pontos x_inicial e x_final
+            # Movimento de patrulha entre os pontos x_inicial e x_final
             if self.facing_right:
-                self.rect.x += self.velocidade_x
-                if self.rect.right >= self.x_final:  # Se chegar ao limite direito
-                    self.rect.right = self.x_final  # Garantir que ele não ultrapasse o limite
-                    self.facing_right = False  # Mudar a direção para a esquerda
+                if self.tem_chao_a_frente(1):
+                    self.rect.x += self.velocidade_x
+                    if self.rect.right >= self.x_final:
+                        self.rect.right = self.x_final
+                        self.facing_right = False
+                else:
+                    self.facing_right = False  # Sem chão à frente, vira
                     
             else:
-                self.rect.x -= self.velocidade_x
-                if self.rect.left <= self.x_inicial:  # Se chegar ao limite esquerdo
-                    self.rect.left = self.x_inicial  # Garantir que ele não ultrapasse o limite
-                    self.facing_right = True  # Mudar a direção para a direita
-                    
+                if self.tem_chao_a_frente(-1):
+                    self.rect.x -= self.velocidade_x
+                    if self.rect.left <= self.x_inicial:
+                        self.rect.left = self.x_inicial
+                        self.facing_right = True
+                else:
+                    self.facing_right = True  # Sem chão à frente, vira
         else:
-        # Caso não esteja patrulhando, ele apenas se move com a velocidade definida
-           self.rect.x += self.velocidade_x
+            # Caso não esteja patrulhando, apenas se move com velocidade
+            if self.tem_chao_a_frente(1 if self.facing_right else -1):
+                self.rect.x += self.velocidade_x if self.facing_right else -self.velocidade_x
 
     def atacar(self):
         """Método para iniciar o ataque com animação."""
@@ -342,17 +362,21 @@ class Inimigo1mp1(pygame.sprite.Sprite):
         self.ultimo_ataque = pygame.time.get_ticks()
 
     def perseguir(self):
-        
+        """Função de perseguição do inimigo, evitando buracos."""
         self.mudar_estado(INIMIGO1MP1IDLE)
-        """Função de perseguição do inimigo."""
+
         if self.jogador.rect.centerx > self.rect.centerx:
-            self.rect.x += self.velocidade_x  # Mover para a direita
-            self.facing_right = True
-            self.mudar_estado(INIMIGO1MP1IDLE)
+            if self.tem_chao_a_frente(1):  # Direção direita
+                self.rect.x += self.velocidade_x
+                self.facing_right = True
+            else:
+                self.mudar_estado(INIMIGO1MP1PARADO)
         else:
-            self.mudar_estado(INIMIGO1MP1IDLE)
-            self.rect.x -= self.velocidade_x  # Mover para a esquerda
-            self.facing_right = False
+            if self.tem_chao_a_frente(-1):  # Direção esquerda
+                self.rect.x -= self.velocidade_x
+                self.facing_right = False
+            else:
+                self.mudar_estado(INIMIGO1MP1PARADO)
 
     def update(self):
 
@@ -796,6 +820,8 @@ class Inimigo1mp2(pygame.sprite.Sprite):
 
         self.image = self.frames[self.frame_index]
         self.rect = self.image.get_rect(topleft=(x, y))
+        self.hitbox = pygame.Rect(self.rect.x + 10, self.rect.y + 10, self.rect.width - 20, self.rect.height - 20) 
+
 
     def load_sprites(self):
         """Carrega os sprites e os divide em frames."""
@@ -1074,6 +1100,9 @@ class Inimigo1mp2(pygame.sprite.Sprite):
             for jogador in inimigos_atingidos:
                 self.receber_dano(jogador.dano)
 
+        self.hitbox.x = self.rect.x + 10
+        self.hitbox.y = self.rect.y + 10
+
         # **Chamando a atualização da animação!**
         self.update_animation()
         self.mask = pygame.mask.from_surface(self.image)
@@ -1082,6 +1111,7 @@ class Inimigo1mp2(pygame.sprite.Sprite):
 
     
     def draw(self, surface, zoom_level=1.0, deslocamento_camera_x=0, deslocamento_camera_y=0):
+        pygame.draw.rect(surface, (255, 0, 0), self.hitbox, 2)
         surface.blit(self.image, self.rect.topleft)
 
         if self.alvo_travado:
@@ -1117,6 +1147,7 @@ class Inimigo1mp2(pygame.sprite.Sprite):
                     if linha_parou:
                         break
                 pygame.draw.line(surface, (255, 255, 0), (x1, y1 - 11), (x2, y2), 3)
+                pygame.draw.rect(surface, (255, 0, 0), self.hitbox, 2)
 
             if not self.esta_atacando and self.laser_completo:
                 self.particulas.clear()
@@ -1166,19 +1197,23 @@ class Inimigo1mp2(pygame.sprite.Sprite):
                         alpha = int(20 + (i * 12))  # Começa mais claro, termina mais opaco
                         largura = 12 - i  # Camadas mais internas são mais finas
 
-                        sombra_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+                        if not hasattr(self, "sombra_surface") or self.sombra_surface.get_size() != surface.get_size():
+                            self.sombra_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+                        else:
+                            self.sombra_surface.fill((0, 0, 0, 0))  # limpa com transparência
                         cor_sombra = (255, 0, 0, alpha)  # RGBA: vermelho com transparência
-                        pygame.draw.line(sombra_surface, cor_sombra, 
+                        pygame.draw.line(self.sombra_surface, cor_sombra, 
                                         (x1 + sombra_offset, y1 - 11 + sombra_offset), 
                                         (x2_animado + sombra_offset, y2_animado + sombra_offset), 
                                         largura)
-                        surface.blit(sombra_surface, (0, 0))
+                        surface.blit(self.sombra_surface, (0, 0))
                     # Laser vermelho neon com brilho
 
                     pygame.draw.line(surface, (255, 0, 0, 80), (x1, y1 - 11), (x2_animado, y2_animado), 6)
+                    pygame.draw.rect(surface, (255, 0, 0), self.hitbox, 2)
 
 
-                    vibração_offset = random.randint(-2, 2)
+                    vibração_offset = (pygame.time.get_ticks() // 30) % 4 - 2
                     pygame.draw.line(surface, (255, 0, 0, 80), 
                                     (x1 + vibração_offset, y1 - 11 + vibração_offset), 
                                     (x2_animado + vibração_offset, y2_animado + vibração_offset), 4)
@@ -1273,6 +1308,7 @@ class Inimigo1mp2(pygame.sprite.Sprite):
 
                         if part[0] < 0 or part[1] < 0 or part[0] > surface.get_width() or part[1] > surface.get_height():
                             self.particulas.remove(part)
+                            
                             
 class BossProjectile(pygame.sprite.Sprite):
     """Projétil disparado pelo Boss."""
@@ -1413,7 +1449,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.altura_mapa = altura_mapa # Essencial para FallingObject
         self.morto = False
 
-        self.vida_maxima = 10; self.vida = self.vida_maxima
+        self.vida_maxima = 100; self.vida = self.vida_maxima
         self.facing_right = True; self.no_chao = True; self.is_dead = False
         self.invulnerable_timer = 0; self.invulnerable_duration = 2500
 
