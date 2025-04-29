@@ -328,7 +328,7 @@ class Jogador(pygame.sprite.Sprite):
                 
                 print(f"Iniciou ataque: {self.state}")
             for inimigo in inimigos:
-                if self.rect.colliderect(inimigo.rect):
+                if pygame.sprite.collide_mask(self, inimigo):
                     inimigo.receber_dano(2, atacando=True)
             else:
                  print(f"Sprite para estado {next_attack_state} não encontrado.")
@@ -336,7 +336,7 @@ class Jogador(pygame.sprite.Sprite):
             print("Sequência máxima de ataque atingida.")
 
 
-    def atualizar(self, inimigos):
+    def atualizar(self, inimigos, boss_instance, mapa_atual_path):
         tempo_atual = pygame.time.get_ticks()
         teclas = pygame.key.get_pressed()
         previous_state = self.state # Guardar estado para detecção de mudança
@@ -537,10 +537,17 @@ class Jogador(pygame.sprite.Sprite):
 
         # Colisão com inimigos (usar collision_rect)
         inimigos_atingidos = pygame.sprite.spritecollide(self, inimigos, False, pygame.sprite.collide_mask)
-        for inimigo in inimigos_atingidos:
-            if self.rect.colliderect(inimigo.rect):
-                if hasattr(inimigo, "state") and not inimigo.morto:
-                    self.receber_dano(1)
+        if mapa_atual_path == 'SalaBoss.tmx':
+            if not boss_instance.is_dead:
+                for inimigo in inimigos_atingidos:
+                    if self.rect.colliderect(inimigo.rect):
+                        if hasattr(inimigo, "state") and not inimigo.morto:
+                            self.receber_dano(1)
+        else:
+            for inimigo in inimigos_atingidos:
+                if self.rect.colliderect(inimigo.rect):
+                    if hasattr(inimigo, "state") and not inimigo.morto:
+                        self.receber_dano(1)
 
         # Atualizar estado de invulnerabilidade
         if self.invulneravel and tempo_atual - self.ultimo_dano > self.tempo_invulneravel:
@@ -727,7 +734,7 @@ class Jogador(pygame.sprite.Sprite):
         frame_width = effect_info["width"]
         frame_height = effect_info["height"]
         num_frames = effect_info["frames"]
-        resize = effect_info.get("resize", (90, 90))  # Tamanho padrão caso não esteja definido
+        resize = effect_info.get("resize", (110, 110))  # Tamanho padrão caso não esteja definido
 
         sheet = pygame.image.load(caminho).convert_alpha()
         self.efeito_frames = []  # Limpa qualquer frame anterior

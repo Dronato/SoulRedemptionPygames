@@ -164,7 +164,7 @@ class Game:
         self.npc = None # NPC em foco
 
         # Controle de Mapa
-        self.mapa_atual_path = "Mapa.tmx" # Começa no Mapa 1
+        self.mapa_atual_path = "SalaBoss.tmx" # Começa no Mapa 1
         # self.proximo_mapa_path = "Mapa(2).tmx" # Removido, lógica agora é contextual
 
         # Câmera e Popups
@@ -861,7 +861,7 @@ class Game:
                 if self.game_state == "PLAYING" and not self.em_conversa:
                     # Atualizar todas as entidades
                     if self.jogador: 
-                        self.jogador.atualizar(self.inimigos)
+                        self.jogador.atualizar(self.inimigos, self.boss_instance, self.mapa_atual_path)
                         self.jogador.update_animation()
                     # Atualizar NPCs do Mapa 1
                     if self.mapa_atual_path == "Mapa.tmx":
@@ -971,7 +971,7 @@ class Game:
                     if self.mapa_atual_path == "SalaBoss.tmx" and self.boss_instance and self.boss_instance.is_dead:
                          # Checa se a animação de morte terminou ou espera um pouco
                          # Exemplo: espera 2 segundos após a morte antes de declarar vitória
-                         if tempo_agora - self.boss_instance.last_attack_time > 2000: # Reusa last_attack_time como tempo da morte
+                         if tempo_agora - self.boss_instance.last_attack_time > 7000: # Reusa last_attack_time como tempo da morte
                               if self.jogador and self.jogador.vida_atual > 0: # Só vence se vivo
                                    pygame.mixer.music.stop(); self.musica_atual = None
                                    pygame.mixer.music.stop()  # Para música do mapa
@@ -1003,7 +1003,8 @@ class Game:
                     # 1. Mapa
                     self.desenhar_mapa_com_zoom()
                     if self.boss_instance and self.boss_instance.is_melee_active == True:
-                        self.boss_instance.desenhar_efeito_melee(self.tela, self.deslocamento_camera_x, self.deslocamento_camera_y)
+                        self.boss_instance.desenhar_efeito_melee(self.tela, self.deslocamento_camera_x, self.deslocamento_camera_y, self.jogador)
+                        self.jogador.receber_dano(1)
 
                     
                     # FUNÇÃO QUE DESENHA O EFEITO DA PLAYER

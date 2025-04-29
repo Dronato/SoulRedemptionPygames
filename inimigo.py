@@ -73,16 +73,15 @@ SPRITES = {
         BOSS_HIT :{"file": "img/sala_boss/boss_hit.png", "frames": 5, "width": 517, "height": 420}, 
         BOSS_CHARGE_FALLING :{"file": "img/sala_boss/boss_meteoro.png", "frames": 21, "width": 517, "height": 420}, 
         BOSS_CHARGE_PROJECTILE :{"file": "img/sala_boss/boss_projetil.png", "frames": 19, "width": 517, "height": 420}, 
-        BOSS_CHARGE_MELEE :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420}, 
+        BOSS_CHARGE_MELEE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
         BOSS_ATTACK_FALLING :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
         BOSS_ATTACK_PROJECTILE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
-        BOSS_ATTACK_MELEE :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420}, 
-        BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_dash1.png", "frames": 6, "width": 517, "height": 420},
-        BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_dash2.png", "frames": 16, "width": 517, "height": 420},
-        BOSS_DEATH :{"file": "img/sala_boss/boss_morto.png", "frames": 24, "width": 517, "height": 420},
+        BOSS_ATTACK_MELEE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
+        BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_dash1.png", "frames": 16, "width": 517, "height": 420},
+        BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_dash2.png", "frames": 13, "width": 517, "height": 420},
         # BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420},
         # BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420},
-        BOSS_DEATH :{"file": "img/sala_boss/boss_morto.png", "frames": 24, "width": 517, "height": 724},
+        BOSS_DEATH :{"file": "img/sala_boss/boss_morto.png", "frames": 24, "width": 517, "height": 420},
         # <<< ADICIONADO >>>
         # Use seus arquivos ou mantenha placeholder.
         # CHARGE pode ser um brilho ou pose diferente.
@@ -1416,7 +1415,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
 
         self.vida_maxima = 10; self.vida = self.vida_maxima
         self.facing_right = True; self.no_chao = True; self.is_dead = False
-        self.invulnerable_timer = 0; self.invulnerable_duration = 300
+        self.invulnerable_timer = 0; self.invulnerable_duration = 2500
 
         self.state = BOSS_IDLE; self.frames = {}; self.frames_atual = []
         self.frame_index = 0; self.animation_timer = 0; self.animation_speed = 10
@@ -1429,7 +1428,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.load_all_sprites() # Garante placeholders se sprites reais falharem
         self.change_state(BOSS_IDLE)
 
-        self.ai_state = 'IDLE'; self.attack_cooldown = 3000
+        self.ai_state = 'IDLE'; self.attack_cooldown = 3250
         self.last_attack_time = pygame.time.get_ticks() - self.attack_cooldown
         self.charge_duration = 1000; self.action_start_time = 0
         self.chosen_attack = None; self.hit_recovery_time = 400; self.last_hit_time = 0
@@ -1452,9 +1451,9 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
 
                 # <<< ADICIONADO: Atributos para Fase 2 e Dash >>>
         self.is_phase_2 = False
-        self.phase_2_threshold = 0.20 # Ativa com 20% de vida ou menos
+        self.phase_2_threshold = 0.40 # Ativa com 20% de vida ou menos
         self.is_dashing = False        # Flag: está no meio do dash?
-        self.dash_speed = 18           # Pixels por frame (ajuste a gosto)
+        self.dash_speed = 15          # Pixels por frame (ajuste a gosto)
         self.dash_y = self.original_y  # O Y será fixo durante o dash
         self.dash_direction = 0        # -1 (esquerda), 1 (retorno da direita)
         self.dash_dano = 1             # Dano de contato do dash
@@ -1563,20 +1562,18 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
             self.efeito_frames.append(frame)
 
 
-    def desenhar_efeito_melee(self, tela, deslocamento_x, deslocamento_y):
+    def desenhar_efeito_melee(self, tela, deslocamento_x, deslocamento_y, jogador):
         if not self.efeito_ativo or not self.efeito_frames:
-            return
+            return False  # Não colidiu
 
-        # Avança o frame até o fim da lista
         self.efeito_timer += 1
         if self.efeito_timer >= self.efeito_speed:
             self.efeito_timer = 0
             self.efeito_index += 1
             if self.efeito_index >= len(self.efeito_frames):
                 self.efeito_ativo = False
-                return  # Acabou a animação
+                return False
 
-        # Pega o frame atual
         frame = self.efeito_frames[self.efeito_index]
         if not self.facing_right:
             frame = pygame.transform.flip(frame, True, False)
@@ -1593,27 +1590,27 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
 
         tela.blit(frame_scaled, (x_tela, y_tela))
 
-        # # --- COLISÃO PERFEITA COM MÁSCARA ---
-        # efeito_mask = pygame.mask.from_surface(frame_scaled)
-        # efeito_rect_mundo = pygame.Rect(
-        #     centro_x - scaled_w // 2,
-        #     centro_y - scaled_h // 2,
-        #     scaled_w,
-        #     scaled_h
-        # )
+        # --- Colisão Perfeita (com máscara) ---
+        efeito_mask = pygame.mask.from_surface(frame_scaled)
+        efeito_rect_mundo = pygame.Rect(
+            centro_x - scaled_w // 2,
+            centro_y - scaled_h // 2,
+            scaled_w,
+            scaled_h
+        )
 
-        # for inimigo in inimigos:
-        #     if not hasattr(inimigo, "mask") or not inimigo.mask:
-        #         continue
+        # Agora calcula o deslocamento entre o jogador e o efeito
+        offset = (
+            jogador.rect.left - efeito_rect_mundo.left,
+            jogador.rect.top - efeito_rect_mundo.top
+        )
 
-        #     offset = (
-        #         inimigo.rect.left - efeito_rect_mundo.left,
-        #         inimigo.rect.top - efeito_rect_mundo.top
-        #     )
+        # Faz a colisão pixel-perfeita
+        if efeito_mask.overlap(jogador.mask, offset):
+            print("[DEBUG] Jogador tocou no pixel do efeito melee!")
+            return True  # Retorna True se colidiu
 
-        #     if efeito_mask.overlap(inimigo.mask, offset):
-        #         print(f"[DEBUG] Efeito colidiu com inimigo em {inimigo.rect.topleft}")
-        #         inimigo.receber_dano(2, atacando=True)
+        return False  # Se não colidiu
 
     
     # FINAL DO ATAQUE DO MELEE 
@@ -1633,6 +1630,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
             return
 
         if self.is_dashing: # Controla todo o processo do dash
+            self.charge_duration = 1500
             self.rect.centery = self.dash_y # Mantém Y constante
             self.rect.x += self.dash_speed * self.dash_direction # Move para esquerda
 
@@ -1896,6 +1894,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
 
         if self.vida <= 0:
             self.change_state(BOSS_DEATH)
+            self.is_dead = True
             self.vida = 0
             self.morrer()
         else:
