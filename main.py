@@ -164,7 +164,7 @@ class Game:
         self.npc = None # NPC em foco
 
         # Controle de Mapa
-        self.mapa_atual_path = "SalaBoss.tmx" # Começa no Mapa 1
+        self.mapa_atual_path = "Mapa.tmx" # Começa no Mapa 1
         # self.proximo_mapa_path = "Mapa(2).tmx" # Removido, lógica agora é contextual
 
         # Câmera e Popups
