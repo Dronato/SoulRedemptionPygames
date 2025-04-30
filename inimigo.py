@@ -78,8 +78,8 @@ SPRITES = {
         BOSS_ATTACK_FALLING :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
         BOSS_ATTACK_PROJECTILE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
         BOSS_ATTACK_MELEE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
-        BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_dash1.png", "frames": 16, "width": 517, "height": 420},
-        BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_dash2.png", "frames": 13, "width": 517, "height": 420},
+        BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_dash1.png", "frames": 8, "width": 517, "height": 420},
+        BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_dash2.png", "frames": 13, "w\idth": 517, "height": 420},
         # BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420},
         # BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420},
         BOSS_DEATH :{"file": "img/sala_boss/boss_morto.png", "frames": 24, "width": 517, "height": 420},
@@ -1471,7 +1471,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.altura_mapa = altura_mapa # Essencial para FallingObject
         self.morto = False
 
-        self.vida_maxima = 100; self.vida = self.vida_maxima
+        self.vida_maxima = 10; self.vida = self.vida_maxima
         self.facing_right = True; self.no_chao = True; self.is_dead = False
         self.invulnerable_timer = 0; self.invulnerable_duration = 2500
 
