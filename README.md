@@ -83,7 +83,7 @@ Essa abordagem permitiu flexibilidade nas entregas, foco na qualidade da experiÃ
 Para iniciar o jogo, execute o seguinte comando no seu terminal:
 
 ```bash
-python SoulRedemption.py
+py main.py
 ```
 ## ğŸ¤ Autores
 
