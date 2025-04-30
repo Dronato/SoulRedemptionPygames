@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="187" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="20" nextobjectid="18">
- <tileset firstgid="1" source="Tileset_Chão.tsx"/>
- <tileset firstgid="61" source="Tileset_Chão_sem_Colisão.tsx"/>
- <tileset firstgid="121" source="Espinho_menor.tsx"/>
- <tileset firstgid="128" source="Espinho_maior.tsx"/>
- <tileset firstgid="142" source="Para baixar (27).tsx"/>
+ <tileset firstgid="1" source="tileset/Tileset_Chão.tsx"/>
+ <tileset firstgid="61" source="tileset/Tileset_Chão_sem_Colisão.tsx"/>
+ <tileset firstgid="121" source="tileset/Espinho_menor.tsx"/>
+ <tileset firstgid="128" source="tileset/Espinho_maior.tsx"/>
+ <tileset firstgid="142" source="tileset/Para baixar (27).tsx"/>
  <objectgroup id="7" name="Buraco" class="Buraco">
   <object id="6" type="Buraco" x="606" y="475.333" width="163" height="2.66667"/>
   <object id="7" type="Buraco" x="1151.33" y="474.667" width="225" height="2.67"/>
   <object id="8" type="Buraco" x="3999.33" y="473.667" width="161" height="2.67"/>
  </objectgroup>
  <imagelayer id="3" name="Background">
-  <image source="Background_2.png" width="5984" height="478"/>
+  <image source="tileset/Background_2.png" width="5984" height="478"/>
  </imagelayer>
  <objectgroup id="14" name="Porta">
   <object id="17" type="Porta" x="5769" y="121" width="47" height="71"/>

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="234" height="84" tilewidth="16" tileheight="16" infinite="0" nextlayerid="15" nextobjectid="8">
- <tileset firstgid="1" source="Porta(Mapa_2).tsx"/>
- <tileset firstgid="97" source="Chão.tsx"/>
+ <tileset firstgid="1" source="tileset/Porta(Mapa_2).tsx"/>
+ <tileset firstgid="97" source="tileset/Chão.tsx"/>
  <imagelayer id="13" name="Background">
-  <image source="img/Background.png" width="3750" height="1346"/>
+  <image source="tileset/Background.png" width="3750" height="1346"/>
  </imagelayer>
  <layer id="1" name="Fundo" width="234" height="84">
   <data encoding="csv">

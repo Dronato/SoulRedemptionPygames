@@ -79,7 +79,7 @@ SPRITES = {
         BOSS_ATTACK_PROJECTILE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
         BOSS_ATTACK_MELEE :{"file": "img/sala_boss/boss_parado.png", "frames": 11, "width": 517, "height": 420}, 
         BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_dash1.png", "frames": 16, "width": 517, "height": 420},
-        BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_dash2.png", "frames": 13, "w\idth": 517, "height": 420},
+        BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_dash2.png", "frames": 13, "width": 517, "height": 420},
         # BOSS_CHARGE_DASH :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420},
         # BOSS_ATTACK_DASH :{"file": "img/sala_boss/boss_melle.png", "frames": 11, "width": 300, "height": 420},
         BOSS_DEATH :{"file": "img/sala_boss/boss_morto.png", "frames": 24, "width": 517, "height": 420},
@@ -302,6 +302,8 @@ class Inimigo1mp1(pygame.sprite.Sprite):
             self.image = self.frames[self.frame_index]
         else:
             self.image = pygame.transform.flip(self.frames[self.frame_index], True, False)
+            
+        self.mask = pygame.mask.from_surface(self.image)
 
     def mudar_estado(self, novo_estado):
         if self.state != novo_estado:
@@ -645,7 +647,7 @@ class Inimigo2mp1(pygame.sprite.Sprite):
         
         if not self.facing_right:
             self.image = self.frames[self.frame_index]
-
+        self.mask = pygame.mask.from_surface(self.image)
     def patrulhar(self):
         if self.patrulhando:
             self.state = INIMIGO1MP1IDLE
@@ -949,6 +951,7 @@ class Inimigo1mp2(pygame.sprite.Sprite):
             self.image = pygame.transform.flip(self.frames[self.frame_index], True, False)
         else:
             self.image = self.frames[self.frame_index]
+        self.mask = pygame.mask.from_surface(self.image)
 
     def criar_laser(self):
         self.alvo_travado = (self.jogador.rect.centerx, self.jogador.rect.centery)
@@ -1471,7 +1474,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.altura_mapa = altura_mapa # Essencial para FallingObject
         self.morto = False
 
-        self.vida_maxima = 100; self.vida = self.vida_maxima
+        self.vida_maxima = 50; self.vida = self.vida_maxima
         self.facing_right = True; self.no_chao = True; self.is_dead = False
         self.invulnerable_timer = 0; self.invulnerable_duration = 2500
 
@@ -2138,7 +2141,7 @@ class Inimigo2mp2(pygame.sprite.Sprite):
 
         frame = self.frames[self.frame_index]
         self.image = pygame.transform.flip(frame, True, False) if self.facing_right else frame
-
+        self.mask = pygame.mask.from_surface(self.image)        
     def linha_de_visao_livre(self):
         # Pega o ponto central do inimigo e do jogador
         x1, y1 = self.rect.center
@@ -2398,7 +2401,7 @@ class Inimigo2mp2_1(pygame.sprite.Sprite):
 
         frame = self.frames[self.frame_index]
         self.image = pygame.transform.flip(frame, True, False) if self.facing_right else frame
-
+        self.mask = pygame.mask.from_surface(self.image)
     def patrulhar(self):
         self.state = INIMIGO2MP2IDLE
         if self.facing_right:
@@ -2722,4 +2725,3 @@ class Inimigo3mp2(pygame.sprite.Sprite):
 
         self.mask = pygame.mask.from_surface(self.image)
         self.update_animation()
-

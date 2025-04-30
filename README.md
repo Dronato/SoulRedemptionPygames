@@ -59,11 +59,6 @@ Essa abordagem permitiu flexibilidade nas entregas, foco na qualidade da experi�
 ### Pré-requisitos
 
 * **Python 3.x:** Certifique-se de ter o Python instalado em sua máquina. Você pode baixá-lo em [https://www.python.org/downloads/](https://www.python.org/downloads/).
-* **Pygame:** A biblioteca Pygame é essencial para executar o jogo. Você pode instalá-la usando o pip:
-
-    ```bash
-    pip install pygame
-    ```
 
 ### Instalação
 
@@ -78,7 +73,11 @@ Essa abordagem permitiu flexibilidade nas entregas, foco na qualidade da experi�
     ```bash
     cd SoulRedemptionPygames
     ```
+3.  baixe as bibliotecas do requirements.txt:
 
+    ```bash
+    pip install -r requirements.txt
+    ```
 ### Executando o Jogo
 
 Para iniciar o jogo, execute o seguinte comando no seu terminal:

@@ -97,7 +97,7 @@ class Game:
             if not os.path.isdir(base_path_ui):
                  base_path_ui_fallback = os.path.join("img", "ui") # Fallback relativo simples
                  if os.path.isdir(base_path_ui_fallback): base_path_ui = base_path_ui_fallback
-                 else: base_path_ui = "" # Não encontrou
+                 else: base_path_ui = "assets" # Não encontrou
 
             coracao_path = os.path.join(base_path_ui, "coracao_cheio.png")
             coracao_v_path = os.path.join(base_path_ui, "coracao_vazio.png")
@@ -177,7 +177,7 @@ class Game:
 
         # Fonte Arcade
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        arcade_font_candidate = os.path.join(base_dir, "ARCADE_N.TTF")
+        arcade_font_candidate = os.path.join('fontes', "ARCADE_N.TTF")
         self.arcane_font_path = arcade_font_candidate if os.path.exists(arcade_font_candidate) else None
         if not self.arcane_font_path: print("AVISO: Fonte ARCADE_N.ttf não encontrada.")
 
@@ -674,7 +674,7 @@ class Game:
             tela = self.tela
 
             # Fonte arcade personalizada (ou alternativa)
-            arcade_font_path = os.path.join(os.path.dirname(__file__), "ARCADE_N.ttf")
+            arcade_font_path = os.path.join('fontes', "ARCADE_N.ttf")
             if os.path.exists(arcade_font_path):
                 font = pygame.font.Font(arcade_font_path, 16)
             else:

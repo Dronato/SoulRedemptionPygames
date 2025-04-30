@@ -30,7 +30,7 @@ def play_cutscene(video_path, tela, audio_path=None):
     tela = pygame.display.set_mode((video_width, video_height))
     pygame.display.set_caption("Cutscene")
 
-    arcade_font_path = os.path.join(os.path.dirname(__file__), "ARCADE_N.ttf")
+    arcade_font_path = os.path.join('fontes', "ARCADE_N.ttf")
     if os.path.exists(arcade_font_path):
         font = pygame.font.Font(arcade_font_path, 16)
     else:
@@ -70,7 +70,7 @@ def play_cutscene(video_path, tela, audio_path=None):
     pygame.mixer.music.stop()
 
 # --- Caminhos dos arquivos ---
-script_dir = os.path.dirname(os.path.abspath(__file__))
+script_dir = 'menu-img'
 fundo_menu_path = os.path.join(script_dir, 'fundo_menu.png')
 fundo_creditos_path = os.path.join(script_dir, 'call.png')
 
@@ -106,7 +106,7 @@ class Menu():
         self.mid_w, self.mid_h = self.LARGURA / 6, self.ALTURA / 1.7
         self.cursor_rect = pygame.Rect(0, 0, 0, 0)
         self.offset = -100
-        self.font_name = 'EFCO Brookshire Regular.ttf'
+        self.font_name = os.path.join('fontes', "EFCO Brookshire Regular.ttf")
         self.font_size_titulo = 100
         self.font_size_opcao = 50
         self.font_size_cursor = 40
