@@ -71,8 +71,8 @@ def play_cutscene(video_path, tela, audio_path=None):
 
 # --- Caminhos dos arquivos ---
 script_dir = 'menu-img'
-fundo_menu_path = os.path.join(script_dir, 'fundo_menu.png')
-fundo_creditos_path = os.path.join(script_dir, 'call.png')
+fundo_menu_path = os.path.join('fundo_menu.png')
+fundo_creditos_path = os.path.join('call.png')
 
 try:
     fundo_menu_surf = pygame.image.load(fundo_menu_path).convert()
@@ -86,8 +86,8 @@ cutscene_ja_tocou = 1
 if cutscene_ja_tocou == 1:
     pygame.mixer.music.stop()
     pygame.mixer.music.pause()
-    video_path = os.path.join(script_dir, "cutscenes", "Cutscene 01.mp4")
-    audio_path = os.path.join(script_dir, "cutscenes", "Cutscene-01.mp3")
+    video_path = os.path.join("cutscenes", "intro.mp4")
+    audio_path = os.path.join("cutscenes", "intro.mp3")
     play_cutscene(video_path, audio_path)
     pygame.mixer.music.unpause()
     cutscene_ja_tocou = 2
@@ -96,7 +96,7 @@ class Menu():
         pygame.mixer.init()
         if not pygame.mixer.music.get_busy():
             pygame.mixer.music.load("musica/MUSICA Tela Inicial.mp3")
-            pygame.mixer.music.set_volume(0.5)
+            pygame.mixer.music.set_volume(1)
             pygame.mixer.music.play(-1)
 
         self.main_game = main_game_instance
@@ -231,8 +231,8 @@ class MainMenu(Menu):
                 elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     if self.state == 'Start':
                         pygame.mixer.music.pause()
-                        video_path = os.path.join(script_dir, "cutscenes", "Cutscene 01.mp4")
-                        audio_path = os.path.join(script_dir, "cutscenes", "Cutscene-01.mp3")
+                        video_path = os.path.join("cutscenes", "Cutscene 01.mp4")
+                        audio_path = os.path.join("cutscenes", "Cutscene-01.mp3")
                         play_cutscene(video_path, self.tela, audio_path)
                         pygame.mixer.music.unpause()
                         next_game_state = "PLAYING"
