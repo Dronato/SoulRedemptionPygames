@@ -88,7 +88,8 @@ if cutscene_ja_tocou == 1:
     pygame.mixer.music.pause()
     video_path = os.path.join("cutscenes", "intro.mp4")
     audio_path = os.path.join("cutscenes", "intro.mp3")
-    play_cutscene(video_path, audio_path)
+    tela_full = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+    play_cutscene(video_path, tela_full, audio_path)
     pygame.mixer.music.unpause()
     cutscene_ja_tocou = 2
 class Menu():
