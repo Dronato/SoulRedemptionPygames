@@ -29,7 +29,7 @@ class NPC_Andy(pygame.sprite.Sprite):
         
         # DEF DE CONVERSAR COM O ANDY
         self.contador = 1  # Começa na fala 1
-        self.total_falas = 5  # Total de imagens de fala
+        self.total_falas = 6  # Total de imagens de fala
         
 
 
