@@ -1474,7 +1474,7 @@ class BossFinal(pygame.sprite.Sprite): # <<< CLASSE REVISADA >>>
         self.altura_mapa = altura_mapa # Essencial para FallingObject
         self.morto = False
 
-        self.vida_maxima = 50; self.vida = self.vida_maxima
+        self.vida_maxima = 26; self.vida = self.vida_maxima
         self.facing_right = True; self.no_chao = True; self.is_dead = False
         self.invulnerable_timer = 0; self.invulnerable_duration = 2500
 

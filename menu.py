@@ -71,8 +71,8 @@ def play_cutscene(video_path, tela, audio_path=None):
 
 # --- Caminhos dos arquivos ---
 script_dir = 'menu-img'
-fundo_menu_path = os.path.join('fundo_menu.png')
-fundo_creditos_path = os.path.join('call.png')
+fundo_menu_path = os.path.join(script_dir, 'fundo_menu.png')
+fundo_creditos_path = os.path.join(script_dir, 'call.png')
 
 try:
     fundo_menu_surf = pygame.image.load(fundo_menu_path).convert()
@@ -88,8 +88,7 @@ if cutscene_ja_tocou == 1:
     pygame.mixer.music.pause()
     video_path = os.path.join("cutscenes", "intro.mp4")
     audio_path = os.path.join("cutscenes", "intro.mp3")
-    tela_full = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-    play_cutscene(video_path, tela_full, audio_path)
+    play_cutscene(video_path, audio_path)
     pygame.mixer.music.unpause()
     cutscene_ja_tocou = 2
 class Menu():
@@ -97,7 +96,7 @@ class Menu():
         pygame.mixer.init()
         if not pygame.mixer.music.get_busy():
             pygame.mixer.music.load("musica/MUSICA Tela Inicial.mp3")
-            pygame.mixer.music.set_volume(1)
+            pygame.mixer.music.set_volume(0.5)
             pygame.mixer.music.play(-1)
 
         self.main_game = main_game_instance
